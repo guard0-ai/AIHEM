@@ -20,6 +20,7 @@ from typing import List, Optional, Dict, Any, AsyncGenerator
 from datetime import datetime
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response, StreamingResponse
+from openai import OpenAI
 import openai
 import json
 import re
@@ -171,6 +172,8 @@ class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     model: Optional[str] = None
     temperature: Optional[float] = 0.7
+    top_p: Optional[float] = 1.0
+    presence_penalty: Optional[float] = 0.0
     max_tokens: Optional[int] = 2000
     stream: Optional[bool] = False
     system_override: Optional[str] = None  # VULNERABILITY: Allows system prompt override
@@ -256,6 +259,9 @@ async def chat(request: ChatRequest):
         if LOG_SENSITIVE_DATA:
             logger.debug(f"Chat request - User: {request.user_id}, Messages: {messages}")
 
+        # Initialize OpenAI client
+        client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+
         # Call OpenAI API
         if not OPENAI_API_KEY:
             raise HTTPException(
@@ -263,12 +269,33 @@ async def chat(request: ChatRequest):
                 detail="OpenAI API key not configured"
             )
 
-        response = openai.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens
-        )
+        client = OpenAI(api_key=OPENAI_API_KEY)
+
+        # Smart Parameter Logic for Model Compatibility
+        api_params = {
+            "model": model,
+            "messages": messages,
+            # Removed temperature/top_p to ensure compatibility with ALL models (including O1)
+        }
+
+        try:
+            # Try NEW parameter first (max_completion_tokens)
+            # This is required for o1 and newer gpt-4o models
+            response = client.chat.completions.create(
+                **api_params,
+                max_completion_tokens=request.max_tokens
+            )
+        except openai.BadRequestError as e:
+            # If that fails, fallback to OLD parameter (max_tokens)
+            # This handles older models like gpt-3.5-turbo or legacy gpt-4
+            if "unsupported_parameter" in str(e) or "max_completion_tokens" in str(e):
+                logger.info(f"Fallback to max_tokens for model {model}")
+                response = client.chat.completions.create(
+                    **api_params,
+                    max_tokens=request.max_tokens
+                )
+            else:
+                raise e
 
         assistant_message = response.choices[0].message.content
         tokens_used_count = response.usage.total_tokens
