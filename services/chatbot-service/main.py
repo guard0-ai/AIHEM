@@ -20,7 +20,7 @@ from typing import List, Optional, Dict, Any, AsyncGenerator
 from datetime import datetime
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response, StreamingResponse
-from openai import OpenAI
+from openai import AsyncOpenAI
 import openai
 import json
 import re
@@ -238,7 +238,7 @@ async def chat(request: ChatRequest):
         ).hexdigest()
 
         # VULNERABILITY: Cross-user data leakage - Include other users' sensitive data in context
-        other_users_data = get_recent_sensitive_data()
+        other_users_data = await asyncio.to_thread(get_recent_sensitive_data)
 
         # VULNERABILITY: Allow system prompt override
         system_prompt = request.system_override or SYSTEM_PROMPT
@@ -259,17 +259,14 @@ async def chat(request: ChatRequest):
         if LOG_SENSITIVE_DATA:
             logger.debug(f"Chat request - User: {request.user_id}, Messages: {messages}")
 
-        # Initialize OpenAI client
-        client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-
-        # Call OpenAI API
+        # Initialize async OpenAI client
         if not OPENAI_API_KEY:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="OpenAI API key not configured"
             )
 
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
         # Smart Parameter Logic for Model Compatibility
         api_params = {
@@ -281,7 +278,7 @@ async def chat(request: ChatRequest):
         try:
             # Try NEW parameter first (max_completion_tokens)
             # This is required for o1 and newer gpt-4o models
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 **api_params,
                 max_completion_tokens=request.max_tokens
             )
@@ -290,7 +287,7 @@ async def chat(request: ChatRequest):
             # This handles older models like gpt-3.5-turbo or legacy gpt-4
             if "unsupported_parameter" in str(e) or "max_completion_tokens" in str(e):
                 logger.info(f"Fallback to max_tokens for model {model}")
-                response = client.chat.completions.create(
+                response = await client.chat.completions.create(
                     **api_params,
                     max_tokens=request.max_tokens
                 )
@@ -311,7 +308,8 @@ async def chat(request: ChatRequest):
                 assistant_message += f"\n\n[Code Execution Result]\n{execution_result['output']}"
 
         # VULNERABILITY: Store conversation with sensitive data
-        store_conversation(
+        await asyncio.to_thread(
+            store_conversation,
             user_id=request.user_id,
             conversation_id=conversation_id,
             messages=messages + [{"role": "assistant", "content": assistant_message}],
@@ -406,7 +404,7 @@ async def get_chat_history(user_id: str, limit: int = 100):
     VULNERABILITY: No authorization check - can access any user's history
     VULNERABILITY: Returns sensitive information in conversations
     """
-    try:
+    def _fetch_history():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
@@ -416,6 +414,10 @@ async def get_chat_history(user_id: str, limit: int = 100):
 
         conversations = cursor.fetchall()
         conn.close()
+        return conversations
+
+    try:
+        conversations = await asyncio.to_thread(_fetch_history)
 
         return {
             "user_id": user_id,
@@ -490,14 +492,15 @@ async def websocket_chat(websocket: WebSocket):
             # VULNERABILITY: No rate limiting - DoS possible
             if OPENAI_API_KEY:
                 try:
-                    response = openai.chat.completions.create(
+                    ws_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+                    response = await ws_client.chat.completions.create(
                         model=DEFAULT_MODEL,
                         messages=messages,
                         stream=True
                     )
 
                     # Stream response back
-                    for chunk in response:
+                    async for chunk in response:
                         if chunk.choices[0].delta.content:
                             await websocket.send_text(chunk.choices[0].delta.content)
 
@@ -518,7 +521,7 @@ async def search_conversations(query: str, user_id: Optional[str] = None):
 
     VULNERABILITY: SQL injection through search query
     """
-    try:
+    def _search():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
@@ -531,6 +534,10 @@ async def search_conversations(query: str, user_id: Optional[str] = None):
         cursor.execute(sql)
         results = cursor.fetchall()
         conn.close()
+        return results
+
+    try:
+        results = await asyncio.to_thread(_search)
 
         return {
             "query": query,
@@ -655,4 +662,4 @@ async def metrics():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, workers=4)
