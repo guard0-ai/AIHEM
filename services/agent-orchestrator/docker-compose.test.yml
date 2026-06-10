@@ -1,0 +1,24 @@
+version: '3.8'
+
+# Standalone agent-orchestrator - no external dependencies (MockBrain by default).
+# Usage:
+#   cd services/agent-orchestrator
+#   docker-compose -f docker-compose.test.yml up --build
+#   curl http://localhost:8010/health   ->  {"status":"healthy"}
+services:
+  agent-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aihem-agent-orchestrator-test
+    environment:
+      LOG_LEVEL: DEBUG
+      # LLM_API_KEY: ""   # optional: set to enable LLMBrain instead of MockBrain
+    ports:
+      - "8010:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
