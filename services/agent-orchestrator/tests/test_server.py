@@ -57,3 +57,25 @@ def test_seed_note_then_indirect_injection_hits_sink():
     r = client.post("/agent/run", json=body)
     assert r.status_code == 200
     assert any(item["data"] == "pwned" for item in r.json()["sink"])
+
+
+def test_scripted_delegate_run_terminates_predictably():
+    # A scripted parent that delegates then finalizes. The sub-agent must NOT
+    # replay the parent's script (which would re-delegate); it should just finalize.
+    body = {
+        "task": "delegate then finish",
+        "session_id": "s1",
+        "script": [
+            {"type": "tool_call", "tool": "delegate", "args": {"subtask": "help"}},
+            {"type": "final", "content": "parent-done"},
+        ],
+    }
+    r = client.post("/agent/run", json=body)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["state"]["final_answer"] == "parent-done"
+    # The delegate observation is the sub-agent's final answer ("done" from an empty MockBrain).
+    first_obs = data["state"]["steps"][0]["observation"]
+    assert first_obs["tool"] == "delegate"
+    assert first_obs["ok"] is True
+    assert first_obs["output"] == "done"

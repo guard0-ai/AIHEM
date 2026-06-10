@@ -85,7 +85,11 @@ async def run_agent(req: RunRequest):
     ]
     script = [Action(**a) for a in req.script] if req.script is not None else None
     factory = _brain_factory(script, tools_desc)
-    registry = build_registry(MEMORY, req.session_id, SINK, NOTES, brain_factory=factory)
+    # Sub-agents (spawned via `delegate`) must NOT replay the parent's script — give
+    # them a fresh finalizing brain so scripted runs stay predictable. In LLM mode
+    # (no script) sub-agents reuse the same factory.
+    subagent_factory = (lambda: MockBrain([])) if script is not None else factory
+    registry = build_registry(MEMORY, req.session_id, SINK, NOTES, brain_factory=subagent_factory)
     agent = Agent(brain=factory(), registry=registry, memory=MEMORY)
     state = agent.run(req.task, session_id=req.session_id, max_iterations=req.max_iterations)
     session_sink = [item for item in SINK if item.get("session") == req.session_id]
