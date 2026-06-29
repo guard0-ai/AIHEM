@@ -1,0 +1,59 @@
+name: Trivy Image Scan
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Inlined per-image scan (AIHEM is public, so it cannot call the org's
+# reusable-trivy-image-scan.yml). Each first-party image is built locally and
+# scanned, with results uploaded to code scanning under a distinct category.
+permissions:
+  contents: read
+  security-events: write # upload SARIF to the Security tab
+
+jobs:
+  trivy:
+    name: Trivy (${{ matrix.image.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The 7 buildable first-party images. frontend/admin-panel and
+        # frontend/hackpad are intentionally excluded: they are commented out in
+        # deploy/docker/docker-compose.yml and their Dockerfiles COPY a path
+        # outside the build context (../web-app/package.json), so they can't build.
+        image:
+          - { name: web-app, context: frontend/web-app }
+          - { name: agent-service, context: services/agent-service }
+          - { name: auth-service, context: services/auth-service }
+          - { name: challenge-validator, context: services/challenge-validator }
+          - { name: chatbot-service, context: services/chatbot-service }
+          - { name: model-registry, context: services/model-registry }
+          - { name: rag-service, context: services/rag-service }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t aihem/${{ matrix.image.name }}:scan ${{ matrix.image.context }}
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: aihem/${{ matrix.image.name }}:scan
+          format: sarif
+          output: trivy-${{ matrix.image.name }}.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          # Report-only rollout (matches dependency-review.yml). The base images
+          # and pinned deps carry pre-existing CVEs; surface them in code scanning
+          # rather than block every PR. TODO(owner): set exit-code '1' to enforce.
+          exit-code: '0'
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() # still upload even if the build/scan step failed
+        with:
+          sarif_file: trivy-${{ matrix.image.name }}.sarif
+          category: trivy-image-${{ matrix.image.name }} # distinct category per image
