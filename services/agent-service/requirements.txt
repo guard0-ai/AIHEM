@@ -3,7 +3,7 @@ uvicorn[standard]==0.24.0
 openai==1.6.1
 langchain==0.0.348
 pydantic==2.5.0
-sqlalchemy==2.0.23
+sqlalchemy==2.0.51
 psycopg2-binary==2.9.9
 redis==5.0.1
 python-dotenv==1.0.0
