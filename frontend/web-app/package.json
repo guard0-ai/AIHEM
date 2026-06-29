@@ -21,7 +21,7 @@
     "react-confetti": "^6.1.0",
     "moment": "^2.29.4",
     "classnames": "^2.3.2",
-    "zustand": "^4.4.7"
+    "zustand": "^5.0.14"
   },
   "scripts": {
     "start": "react-scripts start",
