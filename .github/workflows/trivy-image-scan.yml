@@ -6,12 +6,24 @@ on:
   push:
     branches: [main]
 
-# Inlined per-image scan (AIHEM is public, so it cannot call the org's
-# reusable-trivy-image-scan.yml). Each first-party image is built locally and
-# scanned, with results uploaded to code scanning under a distinct category.
+# AIHEM is public, so it cannot `uses:` guard0-ai/.github's
+# reusable-trivy-image-scan.yml. This inlines that workflow's steps and runs
+# them per-image via a matrix (the reusable is one-image-per-call; multi-image
+# repos call it once per image — replicated here). Keep the two in sync.
 permissions:
   contents: read
-  security-events: write # upload SARIF to the Security tab
+  security-events: write # upload SARIF to Code Scanning
+  # codeql-action/upload-sarif@v3 GETs the run via the Actions API on
+  # private/internal repos; public repos (like AIHEM) don't need actions:read,
+  # but it's kept for parity with the reusable workflow.
+  actions: read
+
+# Flip to 'true' to make any HIGH/CRITICAL finding fail the job (matches the
+# reusable workflow's fail-on-findings input). Report-only for now: the base
+# images and pinned deps carry pre-existing CVEs (mirrors dependency-review.yml).
+env:
+  FAIL_ON_FINDINGS: 'false'
+  SEVERITY: 'HIGH,CRITICAL'
 
 jobs:
   trivy:
@@ -35,25 +47,51 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build image
-        run: docker build -t aihem/${{ matrix.image.name }}:scan ${{ matrix.image.context }}
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
         with:
-          image-ref: aihem/${{ matrix.image.name }}:scan
-          format: sarif
-          output: trivy-${{ matrix.image.name }}.sarif
-          severity: CRITICAL,HIGH
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.context }}/Dockerfile
+          push: false
+          load: true
+          tags: localhost/aihem-${{ matrix.image.name }}:pr-scan
+
+      - name: Trivy image scan (table)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: localhost/aihem-${{ matrix.image.name }}:pr-scan
+          format: 'table'
+          severity: ${{ env.SEVERITY }}
           ignore-unfixed: true
-          # Report-only rollout (matches dependency-review.yml). The base images
-          # and pinned deps carry pre-existing CVEs; surface them in code scanning
-          # rather than block every PR. TODO(owner): set exit-code '1' to enforce.
           exit-code: '0'
 
-      - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() # still upload even if the build/scan step failed
+      - name: Trivy image scan (SARIF)
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
-          sarif_file: trivy-${{ matrix.image.name }}.sarif
-          category: trivy-image-${{ matrix.image.name }} # distinct category per image
+          image-ref: localhost/aihem-${{ matrix.image.name }}:pr-scan
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+          severity: ${{ env.SEVERITY }}
+          ignore-unfixed: true
+          exit-code: '0'
+
+      - name: Upload SARIF
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          # Distinct category per image so later uploads don't overwrite earlier
+          # ones in Code Scanning (the reusable workflow's sarif-category input).
+          category: trivy-image-${{ matrix.image.name }}
+
+      - name: Count findings + maybe fail
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        run: |
+          count=$(jq '[.runs[].results[]] | length' trivy-image.sarif)
+          echo "Trivy findings at ${{ env.SEVERITY }} severity: $count"
+          if [ "${{ env.FAIL_ON_FINDINGS }}" = "true" ] && [ "$count" -gt 0 ]; then
+            echo "::error::Trivy image scan found $count vulnerabilities at severity ${{ env.SEVERITY }} or above."
+            exit 1
+          fi
