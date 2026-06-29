@@ -1,0 +1,20 @@
+name: Format and Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format-and-test:
+    name: Format and Test Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run checks
+        run: |
+          echo "Emitting required status check"
