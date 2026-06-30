@@ -6,15 +6,140 @@ on:
   push:
     branches: [main]
 
+# No paths: filters — the required "Format and Test Check" context must report
+# on every PR, or branch protection leaves it stuck pending.
+
 permissions:
   contents: read
 
 jobs:
-  format-and-test:
-    name: Format and Test Check
+  frontend:
+    name: Frontend (web-app)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/web-app
     steps:
       - uses: actions/checkout@v4
-      - name: Run checks
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18' # matches frontend/web-app/Dockerfile (node:18-alpine)
+
+      # No package-lock.json is committed, so `npm ci` and setup-node's npm cache
+      # (which key on a lockfile) can't be used. Cache ~/.npm manually instead.
+      # TODO(owner): commit package-lock.json to enable `npm ci` + reproducible builds.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('frontend/web-app/package.json') }}
+          restore-keys: npm-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm install
+
+      # CRA has no standalone lint script and no TypeScript (so no typecheck);
+      # its only linter is the bundled ESLint (react-app config) run during build,
+      # which treats warnings as errors when CI=true. The app currently has
+      # pre-existing warnings (unused vars, react-hooks/exhaustive-deps), so this
+      # lint pass is report-only for now — see the PR body for the full list.
+      # TODO(owner): fix those warnings, then drop continue-on-error to enforce.
+      - name: Lint (eslint, warnings as errors)
+        continue-on-error: true
+        run: npm run build
+        env:
+          CI: true
+
+      # Blocking build gate: compile/bundle the app for real. CI=false so the
+      # pre-existing lint warnings above don't fail it, but any genuine build
+      # break (syntax error, missing module, failed import) still fails the job.
+      - name: Build
+        run: npm run build
+        env:
+          CI: false
+
+      # No test files exist yet; pass cleanly rather than fail on an empty suite.
+      - name: Test
+        run: npm test -- --watchAll=false --passWithNoTests
+        env:
+          CI: true
+
+  python-services:
+    name: Python (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - agent-service
+          - auth-service
+          - challenge-validator
+          - chatbot-service
+          - model-registry
+          - rag-service
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # matches services/*/Dockerfile (python:3.10-slim)
+          cache: pip
+          cache-dependency-path: services/${{ matrix.service }}/requirements.txt
+
+      - name: Install dependencies
         run: |
-          echo "Emitting required status check"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff==0.8.6
+
+      # Real gate: every module must byte-compile (catches syntax errors).
+      - name: Compile check
+        run: python -m compileall -q .
+
+      # Lint + format CHECK with ruff. The existing services have pre-existing
+      # violations (unused imports/vars, f-strings, formatting) and AIHEM ships
+      # intentionally-vulnerable challenge code we must not silently rewrite, so
+      # these two steps are report-only for now. Full list is in the PR body.
+      # TODO(owner): fix the listed violations, then drop continue-on-error to enforce.
+      - name: Lint (ruff check)
+        continue-on-error: true
+        run: ruff check .
+
+      - name: Format check (ruff format)
+        continue-on-error: true
+        run: ruff format --check .
+
+      # Run pytest only against a tests/ directory (none exist yet). The lone
+      # rag-service/test_service.py is a manual startup smoke test that needs live
+      # infra (uvicorn + a health endpoint), so it is intentionally not collected.
+      - name: Tests
+        run: |
+          if [ -d tests ]; then
+            pip install pytest
+            pytest -q
+          else
+            echo "No tests/ directory — skipping (service has no unit tests yet)."
+          fi
+
+  # Single rolled-up context required by the org ruleset. Its name must stay
+  # EXACTLY "Format and Test Check"; the matrix's per-cell contexts (e.g.
+  # "Python (rag-service)") do NOT satisfy the rule.
+  format-and-test-check:
+    name: Format and Test Check
+    needs: [frontend, python-services]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all component checks passed
+        run: |
+          echo "frontend:        ${{ needs.frontend.result }}"
+          echo "python-services: ${{ needs.python-services.result }}"
+          if [ "${{ needs.frontend.result }}" != "success" ] || \
+             [ "${{ needs.python-services.result }}" != "success" ]; then
+            echo "::error::One or more component checks failed."
+            exit 1
+          fi
+          echo "All component checks passed."
