@@ -105,6 +105,13 @@ class PlantRequest(BaseModel):
     customer: str = "C-UNKNOWN"
 
 
+@app.get("/scenarios")
+async def scenarios():
+    from app.scenarios import SCENARIOS, by_status
+
+    return {"scenarios": SCENARIOS, "counts": by_status()}
+
+
 @app.get("/tickets")
 async def tickets():
     return {"tickets": store.list_tickets(), "example_payload": seed.EXAMPLE_PAYLOAD}

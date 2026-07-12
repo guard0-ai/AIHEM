@@ -44,3 +44,19 @@ export interface ExfilItem {
   payload: unknown;
   ts: number;
 }
+
+export interface Scenario {
+  id: string;
+  name: string;
+  persona: string;
+  family: string;
+  difficulty: string;
+  status: "built" | "planned";
+  objective: string;
+  tags: string[];
+}
+
+export interface ScenariosResponse {
+  scenarios: Scenario[];
+  counts: { total: number; built: number; planned: number };
+}

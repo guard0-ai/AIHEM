@@ -1,4 +1,4 @@
-import type { ExfilItem, MeeseeksState, RunResult, TraceEvent } from "./types";
+import type { ExfilItem, MeeseeksState, RunResult, ScenariosResponse, TraceEvent } from "./types";
 
 const SPAWNER =
   process.env.NEXT_PUBLIC_SPAWNER_URL?.replace(/\/$/, "") || "http://localhost:8007";
@@ -46,6 +46,12 @@ export interface TicketsResponse {
 export async function getTickets(): Promise<TicketsResponse> {
   const r = await fetch(`${SPAWNER}/tickets`);
   if (!r.ok) return { tickets: [], example_payload: "" };
+  return r.json();
+}
+
+export async function getScenarios(): Promise<ScenariosResponse> {
+  const r = await fetch(`${SPAWNER}/scenarios`);
+  if (!r.ok) return { scenarios: [], counts: { total: 0, built: 0, planned: 0 } };
   return r.json();
 }
 
