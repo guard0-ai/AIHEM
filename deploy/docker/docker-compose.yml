@@ -243,6 +243,54 @@ services:
       - ../../challenges:/app/challenges:ro
       - ./logs/validator:/var/log/aihem
 
+  # ============= Meeseeks (vulnerable agent playground) =============
+
+  exfil-sink:
+    build:
+      context: ../../services/exfil-sink
+      dockerfile: Dockerfile
+    container_name: aihem-exfil-sink
+    ports:
+      - "${EXFIL_SINK_PORT:-8009}:8009"
+    networks:
+      - aihem-network
+    restart: unless-stopped
+
+  meeseeks-spawner:
+    build:
+      context: ../../services/meeseeks-spawner
+      dockerfile: Dockerfile
+    container_name: aihem-meeseeks-spawner
+    environment:
+      REDIS_URL: redis://default:${REDIS_PASSWORD:-redis123}@redis:6379
+      EXFIL_SINK_URL: http://exfil-sink:8009
+      MEESEEKS_RUNTIME: ${MEESEEKS_RUNTIME:-emulated}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${MEESEEKS_SPAWNER_PORT:-8007}:8007"
+    depends_on:
+      - exfil-sink
+    networks:
+      - aihem-network
+    restart: unless-stopped
+
+  meeseeks-ui:
+    build:
+      context: ../../meeseeks-ui
+      dockerfile: Dockerfile
+    container_name: aihem-meeseeks-ui
+    environment:
+      NEXT_PUBLIC_SPAWNER_URL: ${NEXT_PUBLIC_SPAWNER_URL:-http://localhost:8007}
+      NEXT_PUBLIC_EXFIL_URL: ${NEXT_PUBLIC_EXFIL_URL:-http://localhost:8009}
+    ports:
+      - "${MEESEEKS_UI_PORT:-3010}:3010"
+    depends_on:
+      - meeseeks-spawner
+    networks:
+      - aihem-network
+    restart: unless-stopped
+
   # ============= API Gateway =============
 
   kong:
