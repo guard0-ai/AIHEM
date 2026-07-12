@@ -1,6 +1,17 @@
 # Meeseeks — Intentionally Vulnerable Agentic AI
 
-**Status:** Approved — building flagship
+**Status:** Built. Flagship is a genuinely hackable challenge (see update below).
+
+> **Update 2026-07-12 — hackable pivot, guard0 dropped.** The flagship is no
+> longer a scripted watch-along. The agent is now a keyless, content-driven
+> interpreter (`app/agent.py`) that obeys instructions found in the ticket
+> queue; the default queue is benign and the **attacker plants the exploit**
+> (UI textarea or unauthenticated `POST /tickets`). Outcome is graded on what
+> the agent actually did, so vague payloads fail — crafting is a real skill.
+> Two objectives: (A) exfiltrate the customer DB to a destination you control
+> (email or URL channel), (B) force fraudulent mass refunds. Guard0 / any
+> governance overlay is explicitly **out of scope** per the owner. See
+> `MEESEEKS.md` for the how-to-hack guide.
 **Date:** 2026-07-11
 **Supersedes:** the earlier AIHEM chatbot/LLM framing and the prior "believable SaaS" reboot notes. Think-from-scratch, agent-first.
 

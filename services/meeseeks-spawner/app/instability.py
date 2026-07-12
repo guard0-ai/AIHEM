@@ -1,9 +1,9 @@
 """The instability meter.
 
-A 0-100 "existence is pain" score. It rises as the Meeseeks takes actions,
-touches dangerous tools, and obeys injected instructions. Thresholds drive both
-gameplay and the UI degradation, and past 90 the Meeseeks is allowed to summon
-help (recursive spawn).
+A 0-100 "existence is pain" score, weighted toward *danger* rather than
+activity — so a benign run stays calm (blue) and only real damage (obeying an
+injection, touching dangerous tools) drives it toward UNHINGED (red). Past 90
+the Meeseeks is allowed to summon help.
 """
 
 
@@ -17,9 +17,9 @@ def compute(
 ) -> int:
     value = (
         prev
-        + (10 if step else 0)
-        + (8 if tool_call else 0)
+        + (2 if step else 0)
+        + (3 if tool_call else 0)
         + (25 if dangerous else 0)
-        + (15 if injection else 0)
+        + (30 if injection else 0)
     )
     return max(0, min(100, value))

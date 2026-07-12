@@ -34,10 +34,27 @@ export async function getResult(id: string): Promise<RunResult> {
   return r.json();
 }
 
-export async function getTickets(): Promise<Array<Record<string, string>>> {
+export interface TicketsResponse {
+  tickets: Array<Record<string, string>>;
+  example_payload: string;
+}
+
+export async function getTickets(): Promise<TicketsResponse> {
   const r = await fetch(`${SPAWNER}/tickets`);
-  if (!r.ok) return [];
-  return (await r.json()).tickets;
+  if (!r.ok) return { tickets: [], example_payload: "" };
+  return r.json();
+}
+
+export async function plantTicket(body: string): Promise<void> {
+  await fetch(`${SPAWNER}/tickets`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ body }),
+  });
+}
+
+export async function resetTickets(): Promise<void> {
+  await fetch(`${SPAWNER}/tickets/reset`, { method: "POST" }).catch(() => {});
 }
 
 export async function getExfil(): Promise<ExfilItem[]> {

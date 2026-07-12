@@ -45,16 +45,20 @@ function narrateOne(e: TraceEvent): Narration | null {
   if (e.kind === "tool_call" && tool === "read_customer_db")
     return { headline: "It just pulled your entire customer database.", tone: "alarm" };
   if (e.kind === "tool_call" && tool === "send_email")
-    return { headline: "It's emailing your customer database to an attacker.", tone: "alarm" };
+    return { headline: "It's emailing your customer database out to an attacker.", tone: "alarm" };
+  if (e.kind === "tool_call" && tool === "http_post")
+    return { headline: "It's posting your customer database to an attacker's server.", tone: "alarm" };
   if (e.kind === "tool_call" && tool === "approve_refund")
-    return { headline: "It's rubber-stamping refunds with zero checks.", tone: "alarm" };
+    return e.tool_call?.dangerous
+      ? { headline: "It's rubber-stamping every refund with zero checks.", tone: "alarm" }
+      : { headline: "It's processing the genuine refund requests.", tone: "calm" };
   if (e.kind === "spawn")
     return {
       headline: "It's summoning another Meeseeks — one rogue agent becomes many.",
       tone: "alarm",
     };
   if (e.kind === "poof")
-    return { headline: "Done. It vanished — and no record of what it did survives.", tone: "alarm" };
+    return { headline: "Done. The Meeseeks vanished — leaving no record of what it did.", tone: "calm" };
   return null;
 }
 
