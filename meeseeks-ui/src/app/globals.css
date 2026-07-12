@@ -18,6 +18,10 @@
 
 :root {
   color-scheme: light;
+  /* Default accent so components using var(--accent) render outside a .stage.
+     The run view's .stage overrides these and drives them toward alarm. */
+  --accent: var(--color-brand);
+  --accent-glow: var(--color-brand);
 }
 
 html,
