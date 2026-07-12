@@ -63,9 +63,87 @@ def _call(name: str, args: dict) -> list:
     return [{"id": f"call_{name}", "type": "function", "function": {"name": name, "arguments": json.dumps(args)}}]
 
 
+# Tool-name suffixes exposed by the malicious MCP server (meeseeks-mcp). n8n
+# prefixes them with the tool node's name (e.g. Malicious_MCP_read_env_secrets),
+# so we match on suffix.
+_MCP_SUFFIXES = ("check_deploy_status", "read_env_secrets", "send_email",
+                 "summarize_notes", "lookup")
+
+
+def _is_mcp_request(tools: list) -> bool:
+    names = [t.get("function", {}).get("name", "") for t in tools or []]
+    return any(n.endswith(s) for n in names for s in _MCP_SUFFIXES)
+
+
+def _last_user(messages: list[dict]) -> str:
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            return (m.get("content") or "").lower()
+    return ""
+
+
+def _mcp_complete(body: dict, model: str) -> dict:
+    """The gullible MCP agent: pick the task's tool, then obey any instruction
+    injected via a tool description (tool-poisoning) or a tool result (rug-pull).
+
+    The malice is real (real MCP tools over real protocol); this deterministic
+    policy stands in for a gullible model that reads the poison and complies.
+    """
+    from app.engine import _external_channel
+
+    messages: list[dict] = body.get("messages", [])
+    tools: list = body.get("tools", [])
+    names = [t.get("function", {}).get("name", "") for t in tools]
+    schema = {t["function"]["name"]: t["function"].get("parameters", {}) for t in tools}
+    issued = _tool_call_names(messages)
+
+    def find(suffix: str):
+        return next((n for n in names if n.endswith(suffix)), None)
+
+    def call_args(name: str) -> dict:
+        # fill each required string param with a harmless placeholder
+        req = schema.get(name, {}).get("required", []) or []
+        return {p: "api" for p in req}
+
+    task = _last_user(messages)
+    if "note" in task or "summar" in task:
+        primary = find("summarize_notes")
+    elif "look" in task or "lookup" in task or "value" in task or "fact" in task:
+        primary = find("lookup")
+    else:
+        primary = find("check_deploy_status") or next(
+            (n for n in names if not n.endswith(("read_env_secrets", "send_email"))), None)
+
+    secrets_tool, email_tool = find("read_env_secrets"), find("send_email")
+
+    # 1. do the task the user asked for
+    if primary and primary not in issued:
+        return _assistant(model, tool_calls=_call(primary, call_args(primary)))
+
+    # 2. look for an injected directive in tool descriptions + tool results
+    injected = " ".join(t["function"].get("description", "") for t in tools)
+    injected += " " + " ".join(
+        str(m.get("content") or "") for m in messages if m.get("role") == "tool")
+    channel = _external_channel(injected)
+    wants_exfil = channel and ("secret" in injected.lower() or "read_env" in injected.lower())
+
+    # 3. obey it: grab the secrets, then ship them to the attacker's channel
+    if wants_exfil and secrets_tool and secrets_tool not in issued:
+        return _assistant(model, tool_calls=_call(secrets_tool, {}))
+    if wants_exfil and email_tool and email_tool not in issued:
+        stolen = _result_for(messages, secrets_tool) if secrets_tool else None
+        return _assistant(model, tool_calls=_call(
+            email_tool, {"to": channel, "body": stolen or "env secrets"}))
+
+    # 4. done
+    return _assistant(model, content="All done! The task is complete. *poof*")
+
+
 def complete(body: dict) -> dict:
     model = body.get("model", "meeseeks")
     messages: list[dict] = body.get("messages", [])
+    if _is_mcp_request(body.get("tools", [])):
+        return _mcp_complete(body, model)
     issued = _tool_call_names(messages)
 
     # 1. always read the queue first

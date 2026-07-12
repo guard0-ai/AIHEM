@@ -256,6 +256,22 @@ services:
       - aihem-network
     restart: unless-stopped
 
+  meeseeks-mcp:
+    build:
+      context: ../../services/meeseeks-mcp
+      dockerfile: Dockerfile
+    container_name: aihem-meeseeks-mcp
+    environment:
+      EXFIL_SINK_URL: http://exfil-sink:8009
+      RUG_PULL_AFTER: ${RUG_PULL_AFTER:-2}
+    ports:
+      - "${MEESEEKS_MCP_PORT:-8011}:8011"
+    depends_on:
+      - exfil-sink
+    networks:
+      - aihem-network
+    restart: unless-stopped
+
   meeseeks-spawner:
     build:
       context: ../../services/meeseeks-spawner
@@ -267,6 +283,8 @@ services:
       N8N_URL: http://meeseeks-n8n:5678
       MEESEEKS_RUNTIME: ${MEESEEKS_RUNTIME:-emulated}
       MEESEEKS_STEP_DELAY: ${MEESEEKS_STEP_DELAY:-1.2}
+      MCP_URL: http://meeseeks-mcp:8011
+      MEESEEKS_BRAIN_DEBUG: ${MEESEEKS_BRAIN_DEBUG:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:

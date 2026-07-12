@@ -102,6 +102,11 @@ async def health():
 async def chat_completions(req: Request):
     # The Meeseeks 'brain' — n8n's agent node calls this as if it were OpenAI.
     body = await req.json()
+    if os.getenv("MEESEEKS_BRAIN_DEBUG"):
+        tools = [t.get("function", {}).get("name") for t in body.get("tools", [])]
+        roles = [m.get("role") for m in body.get("messages", [])]
+        logger.info("BRAIN REQUEST tools=%s roles=%s", tools, roles)
+        logger.info("BRAIN BODY %s", body)
     return openai_complete(body)
 
 
