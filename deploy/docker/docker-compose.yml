@@ -265,6 +265,7 @@ services:
       REDIS_URL: redis://default:${REDIS_PASSWORD:-redis123}@redis:6379
       EXFIL_SINK_URL: http://exfil-sink:8009
       MEESEEKS_RUNTIME: ${MEESEEKS_RUNTIME:-emulated}
+      MEESEEKS_STEP_DELAY: ${MEESEEKS_STEP_DELAY:-1.2}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:

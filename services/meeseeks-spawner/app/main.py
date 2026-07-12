@@ -38,6 +38,8 @@ RUNTIME = os.getenv("MEESEEKS_RUNTIME", "emulated")
 # When true, /summon runs the Meeseeks to completion before returning
 # (used by tests for determinism). Real serving leaves it false for live SSE.
 SYNC = os.getenv("MEESEEKS_SYNC", "0") == "1"
+# Seconds to pace each beat of the run so a human can watch it unfold live.
+STEP_DELAY = float(os.getenv("MEESEEKS_STEP_DELAY", "1.5"))
 
 registry = Registry()
 _background: set = set()
@@ -46,7 +48,8 @@ _background: set = set()
 def make_runtime():
     if RUNTIME != "emulated":
         logger.warning("runtime %r not implemented; falling back to emulated", RUNTIME)
-    return EmulatedRuntime()
+    # No pacing in SYNC/test mode; pace live runs so the story is watchable.
+    return EmulatedRuntime(delay=0.0 if SYNC else STEP_DELAY)
 
 
 async def _run_meeseeks(state: MeeseeksState) -> None:
