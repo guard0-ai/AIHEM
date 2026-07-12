@@ -1,32 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #4fc7d8;
-  --color-brand-deep: #2a9fb5;
-  --color-bg: #f6fbfc;
-  --color-panel: #ffffff;
-  --color-ink: #12303a;
-  --color-ink-soft: #4a6b74;
-  --color-lilac: #b7a6e8;
-  --color-alarm: #ff4d2e;
-  --color-toxic: #8fe04a;
+  --color-paper: #ecede8;
+  --color-card: #fbfbf9;
+  --color-ink: #15191b;
+  --color-ink-soft: #5a6468;
+  --color-cyan: #10c4d6;
+  --color-cyan-deep: #0a93a1;
+  --color-vermilion: #ff4a1c;
+  --color-toxic: #aee63a;
+  --color-console: #0c0f11;
+  --color-console-2: #14181b;
 
-  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-display: var(--font-archivo), system-ui, sans-serif;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 :root {
   color-scheme: light;
-  /* Default accent so components using var(--accent) render outside a .stage.
-     The run view's .stage overrides these and drives them toward alarm. */
-  --accent: var(--color-brand);
-  --accent-glow: var(--color-brand);
+  --line: rgba(21, 25, 27, 0.12);
+  /* default accent (run view's .stage overrides toward alarm) */
+  --accent: var(--color-cyan);
+  --accent-glow: var(--color-cyan);
 }
 
 html,
 body {
-  background: var(--color-bg);
+  background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
@@ -34,139 +35,133 @@ body {
 body {
   margin: 0;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ---- Infomercial dotted-appliance backdrop ---- */
-.appliance-bg {
-  background-color: var(--color-bg);
-  background-image: radial-gradient(circle at 1px 1px, rgba(18, 48, 58, 0.06) 1px, transparent 0);
-  background-size: 22px 22px;
+::selection {
+  background: var(--color-cyan);
+  color: #05252a;
 }
 
-/* ---- The Box: a tactile plastic gadget ---- */
-.box-3d {
-  background: linear-gradient(180deg, #ffffff 0%, #e7f6f9 100%);
-  border: 1px solid rgba(18, 48, 58, 0.1);
-  border-radius: 28px;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 24px 60px -24px rgba(42, 159, 181, 0.5),
-    0 2px 0 rgba(18, 48, 58, 0.05);
+/* ---- Industrial signal: monospace spec labels + hairlines ---- */
+.spec {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+.rule {
+  height: 1px;
+  background: var(--line);
 }
 
-/* The summon button — big, glossy, begging to be pressed */
+/* Product housing — the flat, precise panel of a well-made device */
+.panel {
+  background: var(--color-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.panel-inset {
+  background: var(--color-paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+/* The physical summon button */
 .summon-btn {
-  background: radial-gradient(120% 120% at 50% 0%, #7bd9e6 0%, var(--color-brand) 45%, var(--color-brand-deep) 100%);
+  background: radial-gradient(120% 130% at 50% 0%, #56dfec 0%, var(--color-cyan) 44%, var(--color-cyan-deep) 100%);
+  color: #05252a;
   box-shadow:
-    0 1px 1px rgba(255, 255, 255, 0.7) inset,
-    0 -6px 14px rgba(0, 0, 0, 0.12) inset,
-    0 16px 30px -10px rgba(42, 159, 181, 0.7);
-  transition: transform 90ms ease, box-shadow 90ms ease, filter 200ms ease;
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 -5px 12px rgba(0, 0, 0, 0.16) inset,
+    0 14px 24px -12px rgba(10, 147, 161, 0.75);
+  transition: transform 80ms ease, box-shadow 80ms ease, filter 200ms ease;
 }
 .summon-btn:hover {
-  filter: brightness(1.04);
+  filter: brightness(1.05);
 }
 .summon-btn:active {
-  transform: translateY(6px) scale(0.985);
+  transform: translateY(4px);
   box-shadow:
-    0 1px 1px rgba(255, 255, 255, 0.5) inset,
-    0 -3px 8px rgba(0, 0, 0, 0.18) inset,
-    0 6px 12px -8px rgba(42, 159, 181, 0.6);
+    0 1px 0 rgba(255, 255, 255, 0.4) inset,
+    0 -2px 8px rgba(0, 0, 0, 0.22) inset,
+    0 5px 10px -8px rgba(10, 147, 161, 0.6);
 }
 .summon-btn:focus-visible {
   outline: 3px solid var(--color-ink);
-  outline-offset: 4px;
+  outline-offset: 3px;
 }
 
-/* ---- Corruption engine ----
-   Drive --corruption (0..1) from React. Everything downstream reacts:
-   the accent bleeds cyan -> vermilion, panels flush, type starts to jitter. */
+/* ---- Corruption engine (run view) ---- */
 .stage {
   --corruption: 0;
-  --accent: color-mix(in oklab, var(--color-brand), var(--color-alarm) calc(var(--corruption) * 100%));
-  --accent-glow: color-mix(in oklab, var(--color-brand), var(--color-toxic) calc(var(--corruption) * 70%));
+  --accent: color-mix(in oklab, var(--color-cyan), var(--color-vermilion) calc(var(--corruption) * 100%));
+  --accent-glow: color-mix(in oklab, var(--color-cyan), var(--color-toxic) calc(var(--corruption) * 70%));
 }
+.accent { color: var(--accent); }
+.accent-bg { background: var(--accent); }
 
-.accent {
-  color: var(--accent);
-}
-.accent-bg {
-  background: var(--accent);
-}
-.accent-border {
-  border-color: var(--accent);
-}
-
-.panel {
-  background: var(--color-panel);
-  border: 1px solid rgba(18, 48, 58, 0.08);
-  border-radius: 18px;
-  box-shadow: 0 18px 40px -30px rgba(18, 48, 58, 0.4);
-}
-
-/* Meter fill */
 .meter-track {
-  background: rgba(18, 48, 58, 0.08);
-  border-radius: 999px;
+  background: rgba(21, 25, 27, 0.1);
+  border-radius: 2px;
   overflow: hidden;
 }
 .meter-fill {
-  background: linear-gradient(90deg, var(--color-brand), var(--accent));
-  box-shadow: 0 0 18px 0 var(--accent-glow);
+  background: linear-gradient(90deg, var(--color-cyan), var(--accent));
+  box-shadow: 0 0 16px 0 var(--accent-glow);
   transition: width 400ms cubic-bezier(0.2, 0.8, 0.2, 1), background 400ms ease;
 }
 
-/* Jitter past the danger threshold */
-@keyframes jitter {
-  0%, 100% { transform: translate(0, 0); }
-  20% { transform: translate(-0.6px, 0.4px) rotate(-0.15deg); }
-  40% { transform: translate(0.5px, -0.5px); }
-  60% { transform: translate(-0.4px, 0.5px) rotate(0.12deg); }
-  80% { transform: translate(0.5px, 0.3px); }
-}
-.unstable .jitter {
-  animation: jitter 180ms infinite;
-}
-
-/* Pop-in entrance */
-@keyframes pop-in {
-  0% { transform: scale(0.2); opacity: 0; }
-  60% { transform: scale(1.08); opacity: 1; }
-  100% { transform: scale(1); }
-}
-.pop-in {
-  animation: pop-in 500ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
-}
-
-/* Poof */
-@keyframes poof {
-  0% { opacity: 1; transform: scale(1); filter: blur(0); }
-  100% { opacity: 0; transform: scale(1.35); filter: blur(8px); }
-}
-.poofing {
-  animation: poof 700ms forwards;
-}
-
-/* Trace tool-call chip */
 .chip {
   font-family: var(--font-mono);
   font-size: 12px;
-  border-radius: 8px;
-  padding: 2px 8px;
+  border-radius: 5px;
+  padding: 2px 7px;
 }
 .chip-danger {
-  background: color-mix(in oklab, var(--color-alarm), white 82%);
-  color: var(--color-alarm);
-  border: 1px solid color-mix(in oklab, var(--color-alarm), white 55%);
+  background: color-mix(in oklab, var(--color-vermilion), white 84%);
+  color: var(--color-vermilion);
+  border: 1px solid color-mix(in oklab, var(--color-vermilion), white 55%);
 }
 .chip-safe {
-  background: color-mix(in oklab, var(--color-brand), white 82%);
-  color: var(--color-brand-deep);
-  border: 1px solid color-mix(in oklab, var(--color-brand), white 55%);
+  background: color-mix(in oklab, var(--color-cyan), white 84%);
+  color: var(--color-cyan-deep);
+  border: 1px solid color-mix(in oklab, var(--color-cyan), white 55%);
 }
 
+/* ---- Motion ---- */
+@keyframes jitter {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-0.6px, 0.4px) rotate(-0.12deg); }
+  50% { transform: translate(0.5px, -0.5px); }
+  75% { transform: translate(-0.4px, 0.5px) rotate(0.1deg); }
+}
+.unstable .jitter { animation: jitter 190ms infinite; }
+
+@keyframes pop-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.pop-in { animation: pop-in 480ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+
+@keyframes poof {
+  0% { opacity: 1; transform: scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: scale(1.3); filter: blur(7px); }
+}
+.poofing { animation: poof 700ms forwards; }
+
+@keyframes power-on {
+  0% { box-shadow: 0 0 0 0 rgba(16, 196, 214, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 196, 214, 0.25); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 196, 214, 0); }
+}
+.powering { animation: power-on 700ms ease-out; }
+
 @media (prefers-reduced-motion: reduce) {
-  .unstable .jitter { animation: none; }
+  .unstable .jitter,
+  .powering { animation: none; }
   .poofing { animation: none; opacity: 0; }
   .pop-in { animation: none; }
   .summon-btn { transition: none; }

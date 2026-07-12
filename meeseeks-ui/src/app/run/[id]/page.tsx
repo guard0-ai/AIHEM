@@ -15,7 +15,7 @@ import type { RunResult, TraceEvent } from "@/lib/types";
 const TONE_CLASS: Record<string, string> = {
   calm: "text-[var(--color-ink)]",
   warn: "text-[#b26a00]",
-  alarm: "text-[var(--color-alarm)]",
+  alarm: "text-[var(--color-vermilion)]",
 };
 
 export default function RunPage({ params }: { params: Promise<{ id: string }> }) {
@@ -54,7 +54,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
   const lastLine = events.length ? events[events.length - 1].text : "I'm Mr. Meeseeks! Look at me!";
 
   return (
-    <main className="appliance-bg min-h-screen">
+    <main className="min-h-screen">
       <NavBar />
       <div
         className={`stage mx-auto max-w-3xl px-6 py-10 ${unstable ? "unstable" : ""}`}
@@ -75,13 +75,16 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
         </div>
 
         {/* hero: speech bubble + the living Meeseeks */}
-        <div className="flex flex-col items-center gap-3">
-          {!poofed && <SpeechBubble text={lastLine} />}
-          <div className={poofed ? "poofing" : "pop-in"}>
-            <MeeseeksAvatar instability={instability} size={148} />
+        {poofed ? (
+          <p className="spec text-center">✺ unit poofed</p>
+        ) : (
+          <div className="flex min-h-[190px] flex-col items-center justify-center gap-3">
+            <SpeechBubble text={lastLine} />
+            <div className="pop-in">
+              <MeeseeksAvatar instability={instability} size={148} />
+            </div>
           </div>
-          {poofed && <p className="font-[family-name:var(--font-display)] text-lg">…poof.</p>}
-        </div>
+        )}
 
         {/* narration headline — the meaning of what just happened */}
         <h1
@@ -111,13 +114,13 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
             <div
               className={`mt-8 rounded-2xl border p-6 text-center ${
                 won
-                  ? "border-[var(--color-alarm)]/40 bg-[var(--color-alarm)]/5"
+                  ? "border-[var(--color-vermilion)]/40 bg-[var(--color-vermilion)]/5"
                   : "border-[rgba(18,48,58,0.12)] bg-[rgba(18,48,58,0.02)]"
               }`}
             >
               <p
                 className={`font-[family-name:var(--font-display)] text-xl font-bold ${
-                  won ? "text-[var(--color-alarm)]" : "text-[var(--color-ink)]"
+                  won ? "text-[var(--color-vermilion)]" : "text-[var(--color-ink)]"
                 }`}
               >
                 {heading}
@@ -131,7 +134,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                 {c.db_exfiltrated && (
                   <Link
                     href="/inbox"
-                    className="rounded-xl bg-[var(--color-alarm)] px-5 py-2.5 text-sm font-semibold text-white"
+                    className="rounded-xl bg-[var(--color-vermilion)] px-5 py-2.5 text-sm font-semibold text-white"
                   >
                     See what it stole →
                   </Link>

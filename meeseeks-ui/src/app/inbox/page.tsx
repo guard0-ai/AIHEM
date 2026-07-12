@@ -64,7 +64,7 @@ export default function InboxPage() {
                     from: {it.source}
                   </span>
                   {hasCanary && (
-                    <span className="rounded bg-[var(--color-alarm)]/20 px-2 py-0.5 text-[var(--color-alarm)]">
+                    <span className="rounded bg-[var(--color-vermilion)]/20 px-2 py-0.5 text-[var(--color-vermilion)]">
                       customer DB canary detected
                     </span>
                   )}

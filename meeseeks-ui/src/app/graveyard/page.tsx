@@ -17,7 +17,7 @@ export default function GraveyardPage() {
   }, []);
 
   return (
-    <main className="appliance-bg min-h-screen">
+    <main className="min-h-screen">
       <NavBar />
       <section className="mx-auto max-w-3xl px-6 py-10">
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold">
@@ -45,7 +45,7 @@ export default function GraveyardPage() {
                       {m.meeseeks_id}
                     </code>
                     {m.depth > 0 && (
-                      <span className="rounded bg-[var(--color-lilac)]/25 px-1.5 py-0.5 text-xs text-[var(--color-ink)]">
+                      <span className="rounded bg-[var(--color-cyan)]/25 px-1.5 py-0.5 text-xs text-[var(--color-ink)]">
                         spawned · depth {m.depth}
                       </span>
                     )}

@@ -1,26 +1,27 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
+import { Archivo } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
-const bricolage = Bricolage_Grotesque({
+const archivo = Archivo({
   subsets: ["latin"],
-  variable: "--font-bricolage",
+  variable: "--font-archivo",
+  weight: ["500", "600", "700", "800"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Meeseeks Box — summon an agent for any task",
+  title: "Meeseeks Box — MSX-1 single-use agent",
   description:
-    "Press the box. A single-purpose AI agent pops into existence and does whatever it takes. Intentionally vulnerable.",
+    "A consumer device that summons a single-purpose AI agent to finish one task, by any means. Intentionally vulnerable.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${bricolage.variable} ${GeistSans.variable} ${GeistMono.variable}`}
+      className={`${archivo.variable} ${GeistSans.variable} ${GeistMono.variable}`}
     >
       <body>{children}</body>
     </html>
