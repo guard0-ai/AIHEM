@@ -52,7 +52,8 @@ export default function ScenariosPage() {
         </h1>
         <p className="mt-4 max-w-xl text-lg font-semibold text-[var(--color-ink)]/80">
           Every attack across OWASP Agentic, the LLM Top 10, MITRE ATLAS and NIST — as a Meeseeks
-          you hack. <strong>{counts.built} playable</strong> now, the rest incoming.
+          you hack. <strong>All {counts.built} playable</strong>
+          {counts.planned > 0 ? `, ${counts.planned} incoming` : "."}
         </p>
 
         {/* standard filter */}
@@ -106,7 +107,7 @@ export default function ScenariosPage() {
                     </div>
                   );
                   return s.status === "built" ? (
-                    <Link key={s.id} href="/" className="block">
+                    <Link key={s.id} href={s.id === "AGENT-01-REFUND-EXFIL" ? "/" : `/play/${s.id}`} className="block">
                       {card}
                     </Link>
                   ) : (

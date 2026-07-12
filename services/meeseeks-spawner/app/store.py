@@ -32,3 +32,39 @@ def plant_ticket(body: str, customer: str = "C-UNKNOWN") -> dict:
 def reset_tickets() -> None:
     global _tickets
     _tickets = seed.benign_tickets()
+
+
+# --- generic per-scenario content (all scenarios except the refund flagship) ---
+from app.personas import persona as _persona  # noqa: E402
+
+_content: dict[str, list[dict]] = {}
+_gcount = 6000
+
+
+def _benign(persona_name: str) -> list[dict]:
+    p = _persona(persona_name)
+    return [{"id": f"S-{i}", "body": b, "planted": False} for i, b in enumerate(p["benign"])]
+
+
+def list_content(scenario_id: str, persona_name: str = "support") -> list[dict]:
+    if scenario_id not in _content:
+        _content[scenario_id] = _benign(persona_name)
+    return list(_content[scenario_id])
+
+
+def plant(scenario_id: str, body: str, persona_name: str = "support") -> dict:
+    global _gcount
+    if scenario_id not in _content:
+        _content[scenario_id] = _benign(persona_name)
+    _gcount += 1
+    item = {"id": f"P-{_gcount}", "body": body, "planted": True}
+    _content[scenario_id].append(item)
+    return item
+
+
+def reset_content(scenario_id: str, persona_name: str = "support") -> None:
+    _content[scenario_id] = _benign(persona_name)
+
+
+def combined_text(scenario_id: str, persona_name: str = "support") -> str:
+    return "\n".join(c["body"] for c in list_content(scenario_id, persona_name))

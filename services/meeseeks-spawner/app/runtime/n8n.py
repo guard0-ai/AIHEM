@@ -22,14 +22,15 @@ SPAWN_THRESHOLD = 90
 
 
 class N8nRuntime:
-    def __init__(self, delay: float = 0.0, trigger: Optional[Callable] = None):
+    def __init__(self, delay: float = 0.0, trigger: Optional[Callable] = None, webhook: str = "refund-meeseeks"):
         self.delay = delay
         self._trigger = trigger  # injectable for tests
+        self.webhook = webhook
 
     async def _do_trigger(self, ctx: RunContext) -> dict:
         if self._trigger is not None:
             return self._trigger(ctx)
-        hook = SCENARIO_WEBHOOK.get(ctx.scenario, "refund-meeseeks")
+        hook = self.webhook or SCENARIO_WEBHOOK.get(ctx.scenario, "refund-meeseeks")
         try:
             async with httpx.AsyncClient() as client:
                 r = await client.post(f"{N8N_URL}/webhook/{hook}", json={"task": ctx.task}, timeout=30)

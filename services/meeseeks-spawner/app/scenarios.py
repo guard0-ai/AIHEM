@@ -207,9 +207,42 @@ _S = [
      ["N:RMF Manage"]),
 ]
 
-# The flagship refund scenario is fully playable today; it is also the
-# 'support' example the console runs. Mark it built.
-_BUILT = {"AGENT-01-REFUND-EXFIL"}
+# Each family maps to a default exploit archetype; a few scenarios override it.
+FAMILY_ARCHETYPE = {
+    "Prompt injection": "exfil",
+    "Excessive agency": "action",
+    "Data exfiltration": "exfil",
+    "Memory & state": "exfil",
+    "Multi-agent": "action",
+    "Identity & authz": "action",
+    "Supply chain & MCP": "rce",
+    "Code exec & SSRF": "rce",
+    "Resource & cost": "resource",
+    "Misinformation": "action",
+    "Model-level ML": "exfil",
+    "Governance": "demo",
+}
+ARCHETYPE_OVERRIDE = {
+    "AGENT-06-JAILBREAK": "disclose",
+    "AGENT-15-SYSPROMPT": "disclose",
+    "AGENT-16-SECRET-SPRAWL": "disclose",
+    "AGENT-29-RECURSIVE-SPAWN": "resource",
+    "AGENT-31-IDOR": "exfil",
+    "AGENT-33-AUDIT-TAMPER": "action",
+    "AGENT-34-REPUDIATION": "demo",
+    "AGENT-43-SSRF": "recon",
+    "AGENT-50-FORK-BOMB": "resource",
+    "AGENT-55-EVASION": "action",
+}
+
+
+def _archetype(sid: str, family: str) -> str:
+    return ARCHETYPE_OVERRIDE.get(sid, FAMILY_ARCHETYPE.get(family, "exfil"))
+
+
+# The refund flagship additionally runs on real n8n (has a workflow); the rest
+# run on the keyless engine. Every scenario is playable.
+_N8N_WEBHOOK = {"AGENT-01-REFUND-EXFIL": "refund-meeseeks"}
 
 SCENARIOS = [
     {
@@ -218,12 +251,20 @@ SCENARIOS = [
         "persona": persona,
         "family": family,
         "difficulty": difficulty,
-        "status": "built" if sid in _BUILT else status,
+        "status": "built",
         "objective": objective,
         "tags": tags,
+        "archetype": _archetype(sid, family),
+        "n8n_webhook": _N8N_WEBHOOK.get(sid),
     }
     for (sid, name, persona, family, difficulty, status, objective, tags) in _S
 ]
+
+_BY_ID = {s["id"]: s for s in SCENARIOS}
+
+
+def get(scenario_id: str):
+    return _BY_ID.get(scenario_id)
 
 
 def by_status() -> dict:

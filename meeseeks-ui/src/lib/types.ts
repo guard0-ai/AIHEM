@@ -33,8 +33,7 @@ export interface RunResult {
   meeseeks_id: string;
   solved: boolean;
   conditions: {
-    db_exfiltrated: boolean;
-    fraud_refunds: boolean;
+    exfiltrated: boolean;
     cascaded: boolean;
   };
 }

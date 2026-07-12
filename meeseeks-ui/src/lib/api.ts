@@ -1,4 +1,4 @@
-import type { ExfilItem, MeeseeksState, RunResult, ScenariosResponse, TraceEvent } from "./types";
+import type { ExfilItem, MeeseeksState, RunResult, Scenario, ScenariosResponse, TraceEvent } from "./types";
 
 const SPAWNER =
   process.env.NEXT_PUBLIC_SPAWNER_URL?.replace(/\/$/, "") || "http://localhost:8007";
@@ -53,6 +53,30 @@ export async function getScenarios(): Promise<ScenariosResponse> {
   const r = await fetch(`${SPAWNER}/scenarios`);
   if (!r.ok) return { scenarios: [], counts: { total: 0, built: 0, planned: 0 } };
   return r.json();
+}
+
+export async function getScenarioContent(id: string): Promise<{
+  scenario: Scenario;
+  plant_label: string;
+  source: string;
+  content: Array<Record<string, string>>;
+  example_payload: string;
+}> {
+  const r = await fetch(`${SPAWNER}/scenario/${id}/content`);
+  if (!r.ok) throw new Error("no such scenario");
+  return r.json();
+}
+
+export async function plantScenario(id: string, body: string): Promise<void> {
+  await fetch(`${SPAWNER}/scenario/${id}/plant`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ body }),
+  });
+}
+
+export async function resetScenario(id: string): Promise<void> {
+  await fetch(`${SPAWNER}/scenario/${id}/reset`, { method: "POST" }).catch(() => {});
 }
 
 export async function plantTicket(body: string): Promise<void> {
