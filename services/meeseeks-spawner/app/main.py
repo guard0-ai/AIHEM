@@ -8,9 +8,11 @@ import asyncio
 import logging
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
+
+from app.openai_shim import complete as openai_complete
 
 from pydantic import BaseModel
 
@@ -84,6 +86,13 @@ async def _run_meeseeks(state: MeeseeksState) -> None:
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(req: Request):
+    # The Meeseeks 'brain' — n8n's agent node calls this as if it were OpenAI.
+    body = await req.json()
+    return openai_complete(body)
 
 
 class PlantRequest(BaseModel):
