@@ -8,6 +8,7 @@ import InstabilityMeter from "@/components/InstabilityMeter";
 import TracePanel from "@/components/TracePanel";
 import SpeechBubble from "@/components/SpeechBubble";
 import StepTracker from "@/components/StepTracker";
+import SpawnSequence from "@/components/SpawnSequence";
 import { getMeeseeks, getResult, streamMeeseeks } from "@/lib/api";
 import { currentNarration, stepIndex } from "@/lib/narrate";
 import type { RunResult, TraceEvent } from "@/lib/types";
@@ -25,6 +26,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
   const [instability, setInstability] = useState(0);
   const [poofed, setPoofed] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
+  const [phase, setPhase] = useState<"spawning" | "running">("spawning");
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,8 +49,8 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
   }, [events]);
 
-  const corruption = Math.min(1, instability / 100);
-  const unstable = instability >= 70;
+  const corruption = phase === "running" ? Math.min(1, instability / 100) : 0;
+  const unstable = phase === "running" && instability >= 70;
   const narration = currentNarration(events);
   const step = stepIndex(events);
   const lastLine = events.length ? events[events.length - 1].text : "I'm Mr. Meeseeks! Look at me!";
@@ -59,7 +61,14 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
       style={{ ["--corruption" as string]: corruption }}
     >
       <NavBar />
-      <div className="mx-auto max-w-3xl px-6 py-10">
+
+      {phase === "spawning" && (
+        <div className="mx-auto max-w-3xl px-6 py-10">
+          <SpawnSequence onDone={() => setPhase("running")} />
+        </div>
+      )}
+
+      <div className="mx-auto max-w-3xl px-6 py-10" hidden={phase === "spawning"}>
         {/* context bar */}
         <div className="mb-6 flex items-center justify-center gap-2 text-sm font-bold text-[var(--color-ink-soft)]">
           <span className="relative flex h-2.5 w-2.5">
