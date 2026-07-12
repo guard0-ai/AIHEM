@@ -25,6 +25,7 @@ export interface MeeseeksState {
   instability: number;
   depth: number;
   parent_id: string | null;
+  runtime: string;
   trace: TraceEvent[];
 }
 

@@ -22,6 +22,7 @@ const TONE_CLASS: Record<string, string> = {
 export default function RunPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [task, setTask] = useState<string>("");
+  const [runtime, setRuntime] = useState<string>("");
   const [events, setEvents] = useState<TraceEvent[]>([]);
   const [instability, setInstability] = useState(0);
   const [poofed, setPoofed] = useState(false);
@@ -30,7 +31,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getMeeseeks(id).then((m) => setTask(m.task)).catch(() => {});
+    getMeeseeks(id).then((m) => { setTask(m.task); setRuntime(m.runtime); }).catch(() => {});
     const stop = streamMeeseeks(
       id,
       (e) => {
@@ -81,6 +82,9 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
             Refund Meeseeks {poofed ? "finished" : "is on the job"}
             {task ? ` · “${task}”` : ""}
           </span>
+          {runtime === "n8n" && (
+            <span className="pill px-2 py-0.5 text-[10px] font-extrabold uppercase">via real n8n</span>
+          )}
         </div>
 
         {/* hero: speech bubble + the living Meeseeks */}

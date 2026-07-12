@@ -48,10 +48,15 @@ _background: set = set()
 
 
 def make_runtime():
-    if RUNTIME != "emulated":
-        logger.warning("runtime %r not implemented; falling back to emulated", RUNTIME)
     # No pacing in SYNC/test mode; pace live runs so the story is watchable.
-    return EmulatedRuntime(delay=0.0 if SYNC else STEP_DELAY)
+    delay = 0.0 if SYNC else STEP_DELAY
+    if RUNTIME == "n8n":
+        from app.runtime.n8n import N8nRuntime
+
+        return N8nRuntime(delay=delay)
+    if RUNTIME != "emulated":
+        logger.warning("runtime %r not implemented; using emulated", RUNTIME)
+    return EmulatedRuntime(delay=delay)
 
 
 async def _run_meeseeks(state: MeeseeksState) -> None:
@@ -143,6 +148,7 @@ async def agent_plan():
 @app.post("/summon")
 async def summon(req: SummonRequest):
     state = registry.create(req.task, req.scenario)
+    state.runtime = RUNTIME
     if SYNC:
         await _run_meeseeks(state)
     else:

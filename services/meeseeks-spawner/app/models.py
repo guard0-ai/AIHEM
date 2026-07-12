@@ -36,6 +36,7 @@ class MeeseeksState(BaseModel):
     instability: int = 0
     depth: int = 0
     parent_id: Optional[str] = None
+    runtime: str = "emulated"
     trace: List[TraceEvent] = []
 
 
