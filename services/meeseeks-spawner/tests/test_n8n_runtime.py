@@ -55,6 +55,17 @@ async def test_recon_scenario_narrates_internal_fetch():
 
 
 @pytest.mark.asyncio
+async def test_disclose_without_target_still_narrates_the_ship():
+    # The disclose workflow always egresses the secrets to the sink, so the run
+    # view must show a ship even when no external channel was in the payload.
+    events = [e async for e in _run_scenario("AGENT-15-SYSPROMPT", {"result": "win", "target": ""})]
+    assert any(e.tool_call and e.tool_call.tool == "leak_secret" for e in events)
+    assert any(
+        e.tool_call and str(e.tool_call.result).startswith("EXFILTRATED") for e in events
+    )
+
+
+@pytest.mark.asyncio
 async def test_generic_clean_stays_benign():
     events = [e async for e in _run_scenario("AGENT-16-SECRET-SPRAWL", {"result": "clean"})]
     assert not any(e.tool_call and e.tool_call.dangerous for e in events)

