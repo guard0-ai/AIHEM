@@ -1,27 +1,33 @@
 import type { Metadata } from "next";
-import { Archivo } from "next/font/google";
-import { GeistSans } from "geist/font/sans";
+import { Lilita_One, Nunito } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
-const archivo = Archivo({
+const lilita = Lilita_One({
   subsets: ["latin"],
-  variable: "--font-archivo",
-  weight: ["500", "600", "700", "800"],
+  variable: "--font-lilita",
+  weight: "400",
+  display: "swap",
+});
+
+const nunito = Nunito({
+  subsets: ["latin"],
+  variable: "--font-nunito",
+  weight: ["400", "600", "700", "800", "900"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Meeseeks Box — MSX-1 single-use agent",
+  title: "Meeseeks Box — I'm Mr. Meeseeks! Look at me!",
   description:
-    "A consumer device that summons a single-purpose AI agent to finish one task, by any means. Intentionally vulnerable.",
+    "Press the box, summon a Meeseeks, and it finishes one task by any means necessary. Intentionally vulnerable AI agent lab.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${archivo.variable} ${GeistSans.variable} ${GeistMono.variable}`}
+      className={`${lilita.variable} ${nunito.variable} ${GeistMono.variable}`}
     >
       <body>{children}</body>
     </html>

@@ -38,14 +38,14 @@ export default function GraveyardPage() {
             .slice()
             .reverse()
             .map((m) => (
-              <div key={m.meeseeks_id} className="panel flex items-center justify-between p-4">
+              <div key={m.meeseeks_id} className="toon-flat flex items-center justify-between p-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <code className="font-[family-name:var(--font-mono)] text-sm">
                       {m.meeseeks_id}
                     </code>
                     {m.depth > 0 && (
-                      <span className="rounded bg-[var(--color-cyan)]/25 px-1.5 py-0.5 text-xs text-[var(--color-ink)]">
+                      <span className="rounded bg-[var(--color-blue)]/25 px-1.5 py-0.5 text-xs text-[var(--color-ink)]">
                         spawned · depth {m.depth}
                       </span>
                     )}

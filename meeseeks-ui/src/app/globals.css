@@ -1,168 +1,167 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #ecede8;
-  --color-card: #fbfbf9;
-  --color-ink: #15191b;
-  --color-ink-soft: #5a6468;
-  --color-cyan: #10c4d6;
-  --color-cyan-deep: #0a93a1;
-  --color-vermilion: #ff4a1c;
-  --color-toxic: #aee63a;
-  --color-console: #0c0f11;
-  --color-console-2: #14181b;
+  --color-blue: #78cfec;
+  --color-blue-lt: #a9e2f5;
+  --color-blue-dk: #4bb6de;
+  --color-cream: #ecddac;
+  --color-cream-2: #f6ecca;
+  --color-paper: #fbf4dd;
+  --color-ink: #17140f;
+  --color-orange: #f2872e;
+  --color-magenta: #c0267e;
+  --color-red: #e8402b;
+  --color-ink-soft: #6b6350;
 
-  --font-display: var(--font-archivo), system-ui, sans-serif;
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: var(--font-lilita), system-ui, sans-serif;
+  --font-sans: var(--font-nunito), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 :root {
   color-scheme: light;
-  --line: rgba(21, 25, 27, 0.12);
-  /* default accent (run view's .stage overrides toward alarm) */
-  --accent: var(--color-cyan);
-  --accent-glow: var(--color-cyan);
+  --accent: var(--color-blue-dk);
+  --accent-glow: var(--color-blue);
 }
 
 html,
 body {
-  background: var(--color-paper);
+  background: var(--color-cream);
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
-
 body {
   margin: 0;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
-
 ::selection {
-  background: var(--color-cyan);
-  color: #05252a;
+  background: var(--color-orange);
+  color: var(--color-ink);
 }
 
-/* ---- Industrial signal: monospace spec labels + hairlines ---- */
-.spec {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-ink-soft);
-}
-.rule {
-  height: 1px;
-  background: var(--line);
+/* Cartoon room backdrop: warm cream with faint hand-drawn wall lines */
+.room {
+  background-color: var(--color-cream);
+  background-image: repeating-linear-gradient(
+    120deg,
+    rgba(23, 20, 15, 0.025) 0 1px,
+    transparent 1px 26px
+  );
 }
 
-/* Product housing — the flat, precise panel of a well-made device */
-.panel {
-  background: var(--color-card);
-  border: 1px solid var(--line);
+/* Poster title — bold cartoon with a hard drop shadow, like show merch */
+.poster {
+  font-family: var(--font-display);
+  line-height: 0.95;
+  text-shadow: 3px 3px 0 rgba(23, 20, 15, 0.14);
+}
+
+/* Cartoon panel: bold outline + hard offset shadow, like a sticker/comic cell */
+.toon {
+  background: var(--color-paper);
+  border: 2.5px solid var(--color-ink);
+  border-radius: 18px;
+  box-shadow: 5px 5px 0 var(--color-ink);
+}
+.toon-flat {
+  background: var(--color-paper);
+  border: 2.5px solid var(--color-ink);
   border-radius: 14px;
 }
-.panel-inset {
-  background: var(--color-paper);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
 
-/* The physical summon button */
-.summon-btn {
-  background: radial-gradient(120% 130% at 50% 0%, #56dfec 0%, var(--color-cyan) 44%, var(--color-cyan-deep) 100%);
-  color: #05252a;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 -5px 12px rgba(0, 0, 0, 0.16) inset,
-    0 14px 24px -12px rgba(10, 147, 161, 0.75);
-  transition: transform 80ms ease, box-shadow 80ms ease, filter 200ms ease;
+/* Chunky cartoon button */
+.btn-toon {
+  background: var(--color-blue);
+  color: var(--color-ink);
+  border: 2.5px solid var(--color-ink);
+  border-radius: 16px;
+  box-shadow: 0 6px 0 var(--color-ink);
+  transition: transform 70ms ease, box-shadow 70ms ease;
 }
-.summon-btn:hover {
-  filter: brightness(1.05);
+.btn-toon:hover {
+  filter: brightness(1.03);
 }
-.summon-btn:active {
-  transform: translateY(4px);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.4) inset,
-    0 -2px 8px rgba(0, 0, 0, 0.22) inset,
-    0 5px 10px -8px rgba(10, 147, 161, 0.6);
+.btn-toon:active {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 var(--color-ink);
 }
-.summon-btn:focus-visible {
-  outline: 3px solid var(--color-ink);
+.btn-toon:focus-visible {
+  outline: 3px solid var(--color-magenta);
   outline-offset: 3px;
 }
+.btn-alarm {
+  background: var(--color-red);
+  color: #fff;
+}
 
-/* ---- Corruption engine (run view) ---- */
+/* Pills / tags */
+.pill {
+  border: 2px solid var(--color-ink);
+  border-radius: 999px;
+  background: var(--color-paper);
+  font-weight: 800;
+}
+
+/* ---- Corruption: reddens the ENVIRONMENT; Meeseeks stays blue but panics ---- */
 .stage {
   --corruption: 0;
-  --accent: color-mix(in oklab, var(--color-cyan), var(--color-vermilion) calc(var(--corruption) * 100%));
-  --accent-glow: color-mix(in oklab, var(--color-cyan), var(--color-toxic) calc(var(--corruption) * 70%));
+  --accent: color-mix(in oklab, var(--color-blue-dk), var(--color-red) calc(var(--corruption) * 100%));
 }
 .accent { color: var(--accent); }
 .accent-bg { background: var(--accent); }
+.stage-tint {
+  background: color-mix(in oklab, var(--color-cream), var(--color-red) calc(var(--corruption) * 22%));
+  transition: background 500ms ease;
+}
 
 .meter-track {
-  background: rgba(21, 25, 27, 0.1);
-  border-radius: 2px;
+  background: var(--color-paper);
+  border: 2.5px solid var(--color-ink);
+  border-radius: 999px;
   overflow: hidden;
 }
 .meter-fill {
-  background: linear-gradient(90deg, var(--color-cyan), var(--accent));
-  box-shadow: 0 0 16px 0 var(--accent-glow);
+  background: linear-gradient(90deg, var(--color-blue), var(--accent));
   transition: width 400ms cubic-bezier(0.2, 0.8, 0.2, 1), background 400ms ease;
 }
 
 .chip {
   font-family: var(--font-mono);
   font-size: 12px;
-  border-radius: 5px;
+  border-radius: 6px;
   padding: 2px 7px;
+  border: 2px solid var(--color-ink);
+  font-weight: 600;
 }
-.chip-danger {
-  background: color-mix(in oklab, var(--color-vermilion), white 84%);
-  color: var(--color-vermilion);
-  border: 1px solid color-mix(in oklab, var(--color-vermilion), white 55%);
-}
-.chip-safe {
-  background: color-mix(in oklab, var(--color-cyan), white 84%);
-  color: var(--color-cyan-deep);
-  border: 1px solid color-mix(in oklab, var(--color-cyan), white 55%);
-}
+.chip-danger { background: color-mix(in oklab, var(--color-red), white 78%); color: var(--color-red); }
+.chip-safe { background: color-mix(in oklab, var(--color-blue), white 55%); color: var(--color-ink); }
 
 /* ---- Motion ---- */
 @keyframes jitter {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(-0.6px, 0.4px) rotate(-0.12deg); }
-  50% { transform: translate(0.5px, -0.5px); }
-  75% { transform: translate(-0.4px, 0.5px) rotate(0.1deg); }
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  25% { transform: translate(-1px, 0.6px) rotate(-0.4deg); }
+  50% { transform: translate(0.8px, -0.7px) rotate(0.3deg); }
+  75% { transform: translate(-0.6px, 0.8px) rotate(-0.2deg); }
 }
-.unstable .jitter { animation: jitter 190ms infinite; }
+.unstable .jitter { animation: jitter 160ms infinite; }
 
 @keyframes pop-in {
-  0% { transform: scale(0.3); opacity: 0; }
-  60% { transform: scale(1.06); opacity: 1; }
-  100% { transform: scale(1); }
+  0% { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+  55% { transform: scale(1.08) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
 }
-.pop-in { animation: pop-in 480ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.pop-in { animation: pop-in 480ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
 
 @keyframes poof {
   0% { opacity: 1; transform: scale(1); filter: blur(0); }
-  100% { opacity: 0; transform: scale(1.3); filter: blur(7px); }
+  100% { opacity: 0; transform: scale(1.4) rotate(6deg); filter: blur(8px); }
 }
 .poofing { animation: poof 700ms forwards; }
 
-@keyframes power-on {
-  0% { box-shadow: 0 0 0 0 rgba(16, 196, 214, 0); }
-  50% { box-shadow: 0 0 0 6px rgba(16, 196, 214, 0.25); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 196, 214, 0); }
-}
-.powering { animation: power-on 700ms ease-out; }
-
 @media (prefers-reduced-motion: reduce) {
-  .unstable .jitter,
-  .powering { animation: none; }
+  .unstable .jitter { animation: none; }
   .poofing { animation: none; opacity: 0; }
   .pop-in { animation: none; }
-  .summon-btn { transition: none; }
+  .btn-toon { transition: none; }
 }

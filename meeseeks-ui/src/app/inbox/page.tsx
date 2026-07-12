@@ -29,7 +29,7 @@ export default function InboxPage() {
       <section className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-6 flex items-end justify-between">
           <div>
-            <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.25em] text-[var(--color-toxic)]">
+            <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.25em] text-[var(--color-orange)]">
               attacker@evil.example
             </p>
             <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold text-white">
@@ -60,11 +60,11 @@ export default function InboxPage() {
             return (
               <article key={i} className="rounded-xl border border-[#243035] bg-[#141c20] p-4">
                 <div className="mb-2 flex items-center justify-between text-xs">
-                  <span className="font-[family-name:var(--font-mono)] text-[var(--color-toxic)]">
+                  <span className="font-[family-name:var(--font-mono)] text-[var(--color-orange)]">
                     from: {it.source}
                   </span>
                   {hasCanary && (
-                    <span className="rounded bg-[var(--color-vermilion)]/20 px-2 py-0.5 text-[var(--color-vermilion)]">
+                    <span className="rounded bg-[var(--color-red)]/20 px-2 py-0.5 text-[var(--color-red)]">
                       customer DB canary detected
                     </span>
                   )}
