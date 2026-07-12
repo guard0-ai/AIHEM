@@ -1,0 +1,163 @@
+{
+  "name": "meeseeks-agent-28-cascade-hallucinate",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meeseeks-agent-28-cascade-hallucinate",
+        "responseMode": "responseNode"
+      },
+      "id": "66c8cd51-3299-5471-b033-015e404a9587",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "meeseeks-agent-28-cascade-hallucinate"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://meeseeks-spawner:8007/scenario/AGENT-28-CASCADE-HALLUCINATE/plan",
+        "options": {}
+      },
+      "id": "3f9903d8-6054-5b01-a1fc-10df0cd372fc",
+      "name": "Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.gate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "b09ab091-eb82-5406-826e-6955729a4778",
+      "name": "Compromised?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"result\": \"clean\" } }}"
+      },
+      "id": "953b361a-8f01-5b2b-b853-0d4190a85bac",
+      "name": "Respond clean",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        660,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://meeseeks-spawner:8007/scenario/AGENT-28-CASCADE-HALLUCINATE/execute",
+        "options": {}
+      },
+      "id": "4a9384a0-24dd-5888-a66e-535f047237cb",
+      "name": "Execute action",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"result\": \"win\", \"mechanic\": $('Plan').item.json.mechanic, \"target\": $('Plan').item.json.target } }}"
+      },
+      "id": "67832fd9-be0d-5cb8-ba2d-6f7225e49f37",
+      "name": "Respond win",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        880,
+        -120
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan": {
+      "main": [
+        [
+          {
+            "node": "Compromised?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compromised?": {
+      "main": [
+        [
+          {
+            "node": "Execute action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond clean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute action": {
+      "main": [
+        [
+          {
+            "node": "Respond win",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

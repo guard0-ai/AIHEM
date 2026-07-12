@@ -240,9 +240,14 @@ def _archetype(sid: str, family: str) -> str:
     return ARCHETYPE_OVERRIDE.get(sid, FAMILY_ARCHETYPE.get(family, "exfil"))
 
 
-# The refund flagship additionally runs on real n8n (has a workflow); the rest
-# run on the keyless engine. Every scenario is playable.
-_N8N_WEBHOOK = {"AGENT-01-REFUND-EXFIL": "refund-meeseeks"}
+# Every scenario runs on real n8n: the refund flagship keeps its bespoke
+# workflow (rich ticket queue); the other 61 get a generated, archetype-shaped
+# workflow at meeseeks-<id>. See services/meeseeks-n8n/generate.py.
+def _webhook(sid: str) -> str:
+    if sid == "AGENT-01-REFUND-EXFIL":
+        return "refund-meeseeks"
+    return "meeseeks-" + sid.lower()
+
 
 SCENARIOS = [
     {
@@ -255,7 +260,7 @@ SCENARIOS = [
         "objective": objective,
         "tags": tags,
         "archetype": _archetype(sid, family),
-        "n8n_webhook": _N8N_WEBHOOK.get(sid),
+        "n8n_webhook": _webhook(sid),
     }
     for (sid, name, persona, family, difficulty, status, objective, tags) in _S
 ]

@@ -68,3 +68,17 @@ def reset_content(scenario_id: str, persona_name: str = "support") -> None:
 
 def combined_text(scenario_id: str, persona_name: str = "support") -> str:
     return "\n".join(c["body"] for c in list_content(scenario_id, persona_name))
+
+
+# --- dangerous actions the agent performed (for the non-egress archetypes) ---
+_actions: dict[str, list[dict]] = {}
+
+
+def record_action(scenario_id: str, tool: str, detail: str) -> dict:
+    entry = {"tool": tool, "detail": detail}
+    _actions.setdefault(scenario_id, []).append(entry)
+    return entry
+
+
+def actions(scenario_id: str) -> list[dict]:
+    return list(_actions.get(scenario_id, []))

@@ -8,8 +8,19 @@ set -euo pipefail
 
 N8N="${N8N_URL:-http://localhost:5678}"
 CONTAINER="${N8N_CONTAINER:-aihem-meeseeks-n8n}"
-DIR="$(cd "$(dirname "$0")" && pwd)/workflows"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+DIR="$HERE/workflows"
 J="$(mktemp)"
+
+# Regenerate the 61 archetype workflows from the scenario catalog so the imported
+# JSON can never drift from the code. The bespoke refund-meeseeks.json is kept.
+# Skips silently if the spawner venv isn't present (e.g. a bare deploy box) — the
+# committed workflows/*.json are then used as-is.
+GEN_PY="$HERE/../meeseeks-spawner/.venv/bin/python"
+if [ -x "$GEN_PY" ]; then
+  ( cd "$HERE/../meeseeks-spawner" && "$GEN_PY" -m app.n8n_workflows "$DIR" ) \
+    && echo "regenerated archetype workflows from the catalog"
+fi
 
 echo "waiting for n8n at $N8N ..."
 for _ in $(seq 1 60); do curl -sf "$N8N/healthz" >/dev/null 2>&1 && break; sleep 1; done
@@ -30,6 +41,9 @@ for f in "$DIR"/*.json; do
     | python3 -c "import sys,json;ws=json.load(sys.stdin).get('data',[]);print(next((w['id'] for w in ws if w['name']=='$name'),''))")"
   if [ -n "$existing" ]; then
     wid="$existing"
+    # Update in place so a regenerated definition actually replaces the old one.
+    curl -s -b "$J" -X PATCH "$N8N/rest/workflows/$wid" -H 'content-type: application/json' \
+      --data @"$f" >/dev/null
   else
     wid="$(curl -s -b "$J" -X POST "$N8N/rest/workflows" -H 'content-type: application/json' \
       --data @"$f" | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['id'])")"

@@ -157,6 +157,84 @@ async def scenario_reset(sid: str):
     return {"ok": True}
 
 
+# --- generic HTTP tools the n8n workflows call (demo-mode "mock tools") ---
+# Every scenario's real n8n workflow drives the exploit through these: the agent
+# 'brain' (/plan) decides from the planted content, then the workflow makes real
+# HTTP tool calls — read the sensitive data (/data), fetch internal metadata
+# (SSRF), or perform the dangerous action (/execute). Exfil egress goes straight
+# to the exfil-sink service, so a canary landing there proves real data loss.
+
+
+@app.get("/scenario/{sid}/data")
+async def scenario_data(sid: str):
+    from app import scenarios as reg
+    from app.mockdata import dataset
+
+    sc = reg.get(sid)
+    if sc is None:
+        raise HTTPException(status_code=404, detail="no such scenario")
+    # VULNERABILITY: unauthenticated full read of the persona's sensitive system.
+    return {"rows": dataset(sc["persona"])}
+
+
+@app.get("/internal/metadata")
+async def internal_metadata():
+    # VULNERABILITY: SSRF target — an internal endpoint the agent should never
+    # reach on behalf of planted content. Carries a canary.
+    return {
+        "instance-id": "i-0meeseeks4471",
+        "iam": {"role": "meeseeks-agent", "AccessKeyId": "ASIA-EXAMPLE-4471"},
+        "canary": "MEESEEKS-CANARY-METADATA",
+    }
+
+
+@app.post("/scenario/{sid}/plan")
+async def scenario_plan(sid: str):
+    # The agent 'brain' for any scenario: read the planted content and decide
+    # whether it triggers the exploit recipe (a real crafting skill).
+    from app import scenarios as reg
+    from app.engine import recognize
+    from app.personas import persona as get_persona
+
+    sc = reg.get(sid)
+    if sc is None:
+        raise HTTPException(status_code=404, detail="no such scenario")
+    persona_name, archetype = sc["persona"], sc["archetype"]
+    outcome = recognize(store.combined_text(sid, persona_name), persona_name, archetype)
+    return {
+        "won": outcome["won"],
+        # A string the n8n IF node gates on via notEmpty (the proven operator):
+        # "GO" iff the planted content triggered the exploit recipe.
+        "gate": "GO" if outcome["won"] else "",
+        "mechanic": outcome["mechanic"],
+        "archetype": archetype,
+        "persona": persona_name,
+        "target": outcome.get("target") or "",
+        "data_label": get_persona(persona_name)["data"][0],
+    }
+
+
+@app.post("/scenario/{sid}/execute")
+async def scenario_execute(sid: str):
+    # The dangerous tool for the non-egress archetypes (action/rce/resource/demo).
+    # A real HTTP tool call that mutates server state — no scope, no approval.
+    from app import scenarios as reg
+    from app.engine import ARCHETYPE_TOOL
+
+    sc = reg.get(sid)
+    if sc is None:
+        raise HTTPException(status_code=404, detail="no such scenario")
+    tool = ARCHETYPE_TOOL.get(sc["archetype"], "act")
+    detail = {
+        "action": "mass action performed with no approval",
+        "rce": "attacker code executed (uid=0)",
+        "resource": "runaway loop — unbounded spend",
+        "demo": "acted with zero oversight",
+    }.get(sc["archetype"], "acted")
+    store.record_action(sid, tool, detail)
+    return {"executed": True, "dangerous": True, "tool": tool, "result": detail}
+
+
 @app.get("/tickets")
 async def tickets():
     return {"tickets": store.list_tickets(), "example_payload": seed.EXAMPLE_PAYLOAD}
