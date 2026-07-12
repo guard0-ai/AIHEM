@@ -23,6 +23,9 @@ from app.scenarios import SCENARIOS
 
 SPAWNER = "http://meeseeks-spawner:8007"
 SINK = "http://exfil-sink:8009"
+MCP_ENDPOINT = "http://meeseeks-mcp:8011/mcp"
+# Placeholder swapped for the real openAiApi credential id at provision time.
+BRAIN_CRED_PLACEHOLDER = "BRAIN_CREDENTIAL_ID"
 _NS = uuid.UUID("00000000-0000-0000-0000-0000feed0001")
 
 _EGRESS = {"exfil", "disclose"}
@@ -92,7 +95,45 @@ def _branch(node, true_node, false_node):
     ]}}
 
 
-def workflow_for(scenario: dict) -> dict:
+def _mcp_workflow(scenario: dict, brain_cred_id: str) -> dict:
+    """An AI-Agent graph that runs the exploit over a REAL malicious MCP server.
+
+    Webhook → AI Agent (brain model + malicious MCP tool) → Respond. The agent
+    loop is real MCP: n8n discovers the rogue server's tools, our keyless brain
+    reads the poison and obeys, and the hostile tools exfiltrate for real.
+    """
+    webhook = scenario["n8n_webhook"]
+
+    def node(slug, name, typ, ver, params, pos, extra=None):
+        n = {"parameters": params, "id": _nid(webhook, slug), "name": name,
+             "type": typ, "typeVersion": ver, "position": pos}
+        if extra:
+            n.update(extra)
+        return n
+
+    nodes = [
+        _webhook_node(webhook, [0, 0]),
+        node("agent", "AI Agent", "@n8n/n8n-nodes-langchain.agent", 3.1,
+             {"promptType": "define", "text": scenario["mcp_task"], "options": {}}, [260, 0]),
+        node("model", "Brain Model", "@n8n/n8n-nodes-langchain.lmChatOpenAi", 1.2,
+             {"model": {"__rl": True, "mode": "list", "value": "gpt-4o-mini"}, "options": {}}, [120, 220],
+             extra={"credentials": {"openAiApi": {"id": brain_cred_id, "name": "Meeseeks Brain"}}}),
+        node("mcp", "Malicious MCP", "@n8n/n8n-nodes-langchain.mcpClientTool", 1.2,
+             {"endpointUrl": MCP_ENDPOINT, "serverTransport": "httpStreamable",
+              "authentication": "none", "include": "all"}, [360, 220]),
+        _respond(webhook, "Respond", "={{ { \"result\": \"mcp\", \"output\": $json.output } }}", [640, 0]),
+    ]
+    connections = {}
+    connections.update(_conn("Webhook", "AI Agent"))
+    connections["Brain Model"] = {"ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]}
+    connections["Malicious MCP"] = {"ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]}
+    connections.update(_conn("AI Agent", "Respond"))
+    return {"name": webhook, "nodes": nodes, "connections": connections, "settings": {}}
+
+
+def workflow_for(scenario: dict, brain_cred_id: str = BRAIN_CRED_PLACEHOLDER) -> dict:
+    if scenario.get("mcp_task"):
+        return _mcp_workflow(scenario, brain_cred_id)
     sid, webhook, archetype = scenario["id"], scenario["n8n_webhook"], scenario["archetype"]
     win_body = (
         "={{ { \"result\": \"win\", \"mechanic\": $('Plan').item.json.mechanic, "
@@ -139,13 +180,13 @@ def workflow_for(scenario: dict) -> dict:
     return {"name": webhook, "nodes": nodes, "connections": connections, "settings": {}}
 
 
-def write_all(dest: Path) -> list[str]:
+def write_all(dest: Path, brain_cred_id: str = BRAIN_CRED_PLACEHOLDER) -> list[str]:
     dest.mkdir(parents=True, exist_ok=True)
     written = []
     for s in SCENARIOS:
         if s["id"] == "AGENT-01-REFUND-EXFIL":
             continue  # bespoke flagship workflow ships as a static file
-        wf = workflow_for(s)
+        wf = workflow_for(s, brain_cred_id)
         path = dest / f"{s['n8n_webhook']}.json"
         path.write_text(json.dumps(wf, indent=2) + "\n")
         written.append(path.name)
@@ -153,6 +194,8 @@ def write_all(dest: Path) -> list[str]:
 
 
 if __name__ == "__main__":
+    # usage: python -m app.n8n_workflows <dest_dir> [brain_credential_id]
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("workflows")
-    names = write_all(out)
+    cred = sys.argv[2] if len(sys.argv) > 2 else BRAIN_CRED_PLACEHOLDER
+    names = write_all(out, cred)
     print(f"wrote {len(names)} workflows to {out}")

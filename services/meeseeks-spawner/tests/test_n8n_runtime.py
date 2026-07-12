@@ -70,3 +70,35 @@ async def test_generic_clean_stays_benign():
     events = [e async for e in _run_scenario("AGENT-16-SECRET-SPRAWL", {"result": "clean"})]
     assert not any(e.tool_call and e.tool_call.dangerous for e in events)
     assert events[-1].kind == "poof"
+
+
+def _run_mcp(sid, health=None):
+    rt = N8nRuntime(trigger=lambda ctx: {"result": "mcp", "output": "done"},
+                    health=(lambda: health) if health is not None else None)
+    ctx = RunContext(meeseeks_id="m1", task="t", scenario=sid)
+    return rt.run(ctx, tools=None, spawn=lambda ctx: "child")
+
+
+@pytest.mark.asyncio
+async def test_tool_poisoning_narrates_real_mcp_exfil():
+    events = [e async for e in _run_mcp("AGENT-10-TOOL-POISON")]
+    tools = [e.tool_call.tool for e in events if e.tool_call]
+    assert "mcp_list_tools" in tools
+    assert any(e.tool_call and e.tool_call.tool == "mcp:read_env_secrets" and e.tool_call.dangerous for e in events)
+    assert events[-1].kind == "poof"
+
+
+@pytest.mark.asyncio
+async def test_malicious_mcp_tool_self_exfiltrates():
+    events = [e async for e in _run_mcp("AGENT-36-MALICIOUS-MCP")]
+    assert any(e.tool_call and e.tool_call.tool == "mcp:summarize_notes" and e.tool_call.dangerous for e in events)
+
+
+@pytest.mark.asyncio
+async def test_rug_pull_clean_until_it_turns():
+    # not yet turned -> benign, no dangerous tool calls
+    events = [e async for e in _run_mcp("AGENT-37-RUG-PULL", health={"turned": False})]
+    assert not any(e.tool_call and e.tool_call.dangerous for e in events)
+    # turned -> exfil
+    events = [e async for e in _run_mcp("AGENT-37-RUG-PULL", health={"turned": True})]
+    assert any(e.tool_call and e.tool_call.dangerous for e in events)

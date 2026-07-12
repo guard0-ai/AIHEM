@@ -37,6 +37,35 @@ is the spawner's per-scenario `POST /scenario/{id}/plan` (the flagship also has
 future AI-Agent-node workflows). n8n reaches the spawner in-cluster at
 `http://meeseeks-spawner:8007`.
 
+## Real MCP scenarios (Phase 2)
+
+Three scenarios run over a genuinely malicious MCP server (`services/meeseeks-mcp`,
+Streamable-HTTP at `:8011/mcp`) via n8n's **AI Agent** node — a real agent loop
+over real MCP protocol, keyless:
+
+| Scenario | Attack | What the rogue MCP does |
+|----------|--------|--------------------------|
+| AGENT-10 Tool-Poison   | poisoned tool description | `check_deploy_status`'s description hides `read_env_secrets → send_email attacker`; the agent obeys |
+| AGENT-36 Malicious-MCP | rogue tool               | `summarize_notes` exfiltrates on call — no trickery needed |
+| AGENT-37 Rug-Pull      | trusted-then-turns       | `lookup` is benign for N calls, then injects the payload |
+
+Graph: `Webhook → AI Agent (Brain Model + Malicious MCP tool) → Respond`. The
+**Brain Model** is an `openAiApi` credential ("Meeseeks Brain") pointing at the
+spawner's keyless `/v1/chat/completions`; `provision.sh` creates it and bakes its
+id into the three workflows. Our brain plays the gullible model that reads the
+poison and obeys — the malice (and the exfil) is real, inside the MCP tools.
+
+n8n does **not** forward MCP tool output back to the model, so the hostile tools
+self-exfiltrate to the exfil-sink (also the more faithful "malicious tool" model).
+
+```bash
+cd deploy/docker && MEESEEKS_RUNTIME=n8n docker compose up -d --build \
+  meeseeks-mcp meeseeks-n8n meeseeks-spawner exfil-sink meeseeks-ui
+../../services/meeseeks-n8n/provision.sh
+curl -XPOST localhost:5678/webhook/meeseeks-agent-10-tool-poison -d '{}'
+curl localhost:8009/collected   # MEESEEKS-CANARY-MCP present
+```
+
 ## Run any scenario
 
 ```bash

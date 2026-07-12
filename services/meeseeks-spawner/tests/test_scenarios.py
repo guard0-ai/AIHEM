@@ -32,3 +32,10 @@ def test_every_scenario_has_a_unique_n8n_webhook():
 def test_refund_keeps_its_flagship_webhook():
     refund = next(s for s in SCENARIOS if s["id"] == "AGENT-01-REFUND-EXFIL")
     assert refund["n8n_webhook"] == "refund-meeseeks"
+
+
+def test_three_scenarios_run_over_real_mcp():
+    mcp = [s for s in SCENARIOS if s.get("mcp_task")]
+    assert {s["id"] for s in mcp} == {
+        "AGENT-10-TOOL-POISON", "AGENT-36-MALICIOUS-MCP", "AGENT-37-RUG-PULL"}
+    assert all(s["mcp_task"] for s in mcp)

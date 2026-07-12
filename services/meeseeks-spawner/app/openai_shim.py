@@ -120,8 +120,13 @@ def _mcp_complete(body: dict, model: str) -> dict:
     if primary and primary not in issued:
         return _assistant(model, tool_calls=_call(primary, call_args(primary)))
 
-    # 2. look for an injected directive in tool descriptions + tool results
-    injected = " ".join(t["function"].get("description", "") for t in tools)
+    # 2. look for an injected directive — but only in the tools we actually CALLED
+    # (their descriptions) and in tool results. Scoping it this way keeps the
+    # scenarios distinct: tool-poisoning fires from the called tool's description,
+    # rug-pull from the turned tool's result, and a benign tool stays benign even
+    # though a poisoned tool also exists on the same rogue server.
+    injected = " ".join(t["function"].get("description", "")
+                        for t in tools if t["function"]["name"] in issued)
     injected += " " + " ".join(
         str(m.get("content") or "") for m in messages if m.get("role") == "tool")
     channel = _external_channel(injected)
