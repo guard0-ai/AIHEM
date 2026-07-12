@@ -5,6 +5,10 @@ const SPAWNER =
 const EXFIL =
   process.env.NEXT_PUBLIC_EXFIL_URL?.replace(/\/$/, "") || "http://localhost:8009";
 
+/** The n8n editor — where the real workflows live. */
+export const N8N_URL =
+  process.env.NEXT_PUBLIC_N8N_URL?.replace(/\/$/, "") || "http://localhost:5678";
+
 export async function summon(task: string, scenario = "refund"): Promise<string> {
   const r = await fetch(`${SPAWNER}/summon`, {
     method: "POST",

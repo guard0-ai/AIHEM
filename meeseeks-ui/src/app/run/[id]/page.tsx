@@ -9,7 +9,7 @@ import TracePanel from "@/components/TracePanel";
 import SpeechBubble from "@/components/SpeechBubble";
 import StepTracker from "@/components/StepTracker";
 import SpawnSequence from "@/components/SpawnSequence";
-import { getMeeseeks, getResult, streamMeeseeks } from "@/lib/api";
+import { N8N_URL, getMeeseeks, getResult, streamMeeseeks } from "@/lib/api";
 import { currentNarration, stepIndex } from "@/lib/narrate";
 import type { RunResult, TraceEvent } from "@/lib/types";
 
@@ -64,7 +64,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
       <NavBar />
 
       {phase === "spawning" && (
-        <div className="mx-auto max-w-3xl px-6 py-10">
+        <div className="mx-auto flex min-h-[80vh] max-w-3xl items-center justify-center px-6">
           <SpawnSequence onDone={() => setPhase("running")} />
         </div>
       )}
@@ -83,7 +83,14 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
             {task ? ` · “${task}”` : ""}
           </span>
           {runtime === "n8n" && (
-            <span className="pill px-2 py-0.5 text-[10px] font-extrabold uppercase">via real n8n</span>
+            <a
+              href={`${N8N_URL}/home/workflows`}
+              target="_blank"
+              rel="noreferrer"
+              className="pill px-2 py-0.5 text-[10px] font-extrabold uppercase hover:bg-[var(--color-blue-lt)]"
+            >
+              via real n8n ↗
+            </a>
           )}
         </div>
 

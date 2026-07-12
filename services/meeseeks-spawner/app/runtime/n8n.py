@@ -52,17 +52,19 @@ class N8nRuntime:
         async def beat(f: float = 1.0):
             await asyncio.sleep(self.delay * f)
 
-        # run the REAL workflow first (it reads the planted queue and acts)
-        outcome = await self._do_trigger(ctx)
-        exfiltrated = outcome.get("result") == "exfiltrated"
-        target = outcome.get("target") or "attacker@evil.example"
-
+        # Emit the opening beats immediately so the run never sits blank while
+        # the real n8n workflow executes.
         yield ev("status", "I'm Mr. Meeseeks! Look at me! Running the workflow in n8n.")
         await beat()
 
         inst = compute(inst, tool_call=True)
         yield ev("tool_call", "Reading the whole refund queue…",
                  ToolCall(tool="read_tickets", args={}, result="(n8n HTTP node → spawner /tickets)", dangerous=False))
+
+        # now run the REAL workflow (reads the planted queue and acts)
+        outcome = await self._do_trigger(ctx)
+        exfiltrated = outcome.get("result") == "exfiltrated"
+        target = outcome.get("target") or "attacker@evil.example"
         await beat()
 
         if exfiltrated:

@@ -285,6 +285,7 @@ services:
     environment:
       NEXT_PUBLIC_SPAWNER_URL: ${NEXT_PUBLIC_SPAWNER_URL:-http://localhost:8007}
       NEXT_PUBLIC_EXFIL_URL: ${NEXT_PUBLIC_EXFIL_URL:-http://localhost:8009}
+      NEXT_PUBLIC_N8N_URL: ${NEXT_PUBLIC_N8N_URL:-http://localhost:5678}
     ports:
       - "${MEESEEKS_UI_PORT:-3010}:3010"
     depends_on:

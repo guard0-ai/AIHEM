@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { N8N_URL } from "@/lib/api";
 
 export default function NavBar() {
   return (
@@ -12,6 +13,7 @@ export default function NavBar() {
         </Link>
         <div className="flex items-center gap-4 text-sm font-extrabold">
           <Link href="/" className="hover:text-[var(--color-blue-dk)]">Console</Link>
+          <a href={`${N8N_URL}/home/workflows`} target="_blank" rel="noreferrer" className="hover:text-[var(--color-blue-dk)]">Workflows&nbsp;↗</a>
           <Link href="/inbox" className="hover:text-[var(--color-red)]">Attacker inbox</Link>
           <Link href="/graveyard" className="hover:text-[var(--color-magenta)]">Graveyard</Link>
         </div>
