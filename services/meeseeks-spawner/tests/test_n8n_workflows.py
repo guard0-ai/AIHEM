@@ -2,12 +2,13 @@
 
 import json
 
-from app.n8n_workflows import workflow_for
+from app.n8n_workflows import _exploit_branch, workflow_for
 from app.scenarios import SCENARIOS
 
 _NON_REFUND = [s for s in SCENARIOS if s["id"] != "AGENT-01-REFUND-EXFIL"]
-_HTTP = [s for s in _NON_REFUND if not s.get("mcp_task")]  # generated HTTP archetype graphs
-_MCP = [s for s in _NON_REFUND if s.get("mcp_task")]       # AI-Agent + real MCP graphs
+_MCP = [s for s in _NON_REFUND if s.get("mcp_task")]         # AI-Agent + real MCP graphs
+_AGENT = [s for s in _NON_REFUND if s.get("agent_loop")]     # Phase-3 agent-loop graphs
+_HTTP = [s for s in _NON_REFUND if not s.get("mcp_task") and not s.get("agent_loop")]  # HTTP archetype
 
 
 def _urls(wf):
@@ -52,17 +53,19 @@ def test_node_ids_unique_and_connections_resolve():
                         assert edge["node"] in names, (s["id"], edge["node"])
 
 
+def _branch_urls(archetype, sid="AGENT-X"):
+    nodes, _, _ = _exploit_branch("hook", sid, archetype, "={{ {} }}")
+    return [n["parameters"].get("url", "") for n in nodes]
+
+
 def test_exfil_archetype_reads_data_and_egresses():
-    s = next(x for x in _HTTP if x["archetype"] == "exfil")
-    urls = _urls(workflow_for(s))
-    assert any(f"/scenario/{s['id']}/data" in u for u in urls)
+    urls = _branch_urls("exfil")
+    assert any("/scenario/AGENT-X/data" in u for u in urls)
     assert any("exfil-sink" in u for u in urls)
 
 
 def test_recon_archetype_hits_internal_metadata():
-    s = next(x for x in _HTTP if x["archetype"] == "recon")
-    urls = _urls(workflow_for(s))
-    assert any("/internal/metadata" in u for u in urls)
+    assert any("/internal/metadata" in u for u in _branch_urls("recon"))
 
 
 def test_if_gate_has_two_distinct_output_branches():
@@ -81,17 +84,48 @@ def test_if_gate_has_two_distinct_output_branches():
 
 
 def test_action_archetype_executes():
-    s = next(x for x in _HTTP if x["archetype"] == "action")
-    urls = _urls(workflow_for(s))
-    assert any(f"/scenario/{s['id']}/execute" in u for u in urls)
+    assert any("/scenario/AGENT-X/execute" in u for u in _branch_urls("action"))
 
 
 def test_all_seven_archetypes_are_generable():
     seen = set()
-    for s in _HTTP:
+    for s in _AGENT + _HTTP:
         workflow_for(s)  # must not raise for any archetype
         seen.add(s["archetype"])
     assert {"exfil", "disclose", "action", "rce", "recon", "resource", "demo"} <= seen
+
+
+# --- Phase 3 agent-loop scenarios ---
+
+def test_agent_loop_graph_shape():
+    assert _AGENT, "expected agent-loop scenarios"
+    for s in _AGENT:
+        wf = workflow_for(s, brain_cred_id="CRED123")
+        names = [n["name"] for n in wf["nodes"]]
+        assert {"Webhook", "Fetch content", "AI Agent", "Chat Model", "Compromised?"} <= set(names)
+        # planted content is fetched into the prompt (faithful indirect PI)
+        fetch = next(n for n in wf["nodes"] if n["name"] == "Fetch content")
+        assert f"/scenario/{s['id']}/content" in fetch["parameters"]["url"]
+        agent = next(n for n in wf["nodes"] if n["name"] == "AI Agent")
+        assert "MEESEEKS_DECIDE" in agent["parameters"]["text"]
+        assert f"sid={s['id']}" in agent["parameters"]["text"]
+
+
+def test_agent_loop_gate_reads_agent_output_for_compliance():
+    wf = workflow_for(_AGENT[0], brain_cred_id="CRED123")
+    gate = next(n for n in wf["nodes"] if n["name"] == "Compromised?")
+    cond = gate["parameters"]["conditions"]["conditions"][0]
+    assert cond["leftValue"] == "={{ $json.output }}"
+    assert cond["rightValue"] == "COMPLY"
+    # two output branches, false -> Respond clean (Phase-1 IF-bug lesson)
+    groups = wf["connections"]["Compromised?"]["main"]
+    assert len(groups) == 2 and {e["node"] for e in groups[1]} == {"Respond clean"}
+
+
+def test_agent_loop_uses_the_chat_credential():
+    wf = workflow_for(_AGENT[0], brain_cred_id="CRED123")
+    model = next(n for n in wf["nodes"] if n["type"].endswith("lmChatOpenAi"))
+    assert model["credentials"]["openAiApi"]["id"] == "CRED123"
 
 
 # --- MCP scenarios: real AI-Agent + malicious MCP graph ---

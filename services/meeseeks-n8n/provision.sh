@@ -24,24 +24,38 @@ if ! curl -s -c "$J" -X POST "$N8N/rest/owner/setup" -H 'content-type: applicati
       -d '{"emailOrLdapLoginId":"lab@meeseeks.local","password":"MeeseeksLab1"}' >/dev/null
 fi
 
-# The MCP AI-Agent workflows need an OpenAI-compatible credential pointing at the
-# spawner's keyless brain. Create it once (idempotent by name) and capture its id.
+# The AI-Agent workflows (MCP + Phase-3 agent loops) need an OpenAI-compatible
+# Chat Model credential. MEESEEKS_MODE picks which:
+#   demo (default) -> keyless "Meeseeks Brain" -> spawner /v1 (deterministic).
+#   live           -> "Meeseeks Live LLM" -> a real BYO-key LLM (OPENAI_API_KEY).
+MODE="${MEESEEKS_MODE:-demo}"
+if [ "$MODE" = "live" ] && [ -n "${OPENAI_API_KEY:-}" ]; then
+  CRED_NAME="Meeseeks Live LLM"
+  CRED_DATA="{\"apiKey\":\"${OPENAI_API_KEY}\",\"url\":\"${OPENAI_BASE_URL:-https://api.openai.com/v1}\"}"
+  CHAT_MODEL="${OPENAI_MODEL:-gpt-4o-mini}"
+  echo "MEESEEKS_MODE=live — real LLM ($CHAT_MODEL)"
+else
+  [ "$MODE" = "live" ] && echo "MEESEEKS_MODE=live but OPENAI_API_KEY is unset — using the keyless demo brain"
+  CRED_NAME="Meeseeks Brain"
+  CRED_DATA='{"apiKey":"sk-meeseeks","url":"http://meeseeks-spawner:8007/v1"}'
+  CHAT_MODEL="meeseeks-decider"
+fi
 CID="$(curl -s -b "$J" "$N8N/rest/credentials" \
-  | python3 -c "import sys,json;cs=json.load(sys.stdin).get('data',[]);print(next((c['id'] for c in cs if c['name']=='Meeseeks Brain'),''))" 2>/dev/null || true)"
+  | python3 -c "import sys,json;cs=json.load(sys.stdin).get('data',[]);print(next((c['id'] for c in cs if c['name']=='$CRED_NAME'),''))" 2>/dev/null || true)"
 if [ -z "$CID" ]; then
   CID="$(curl -s -b "$J" -X POST "$N8N/rest/credentials" -H 'content-type: application/json' \
-    -d '{"name":"Meeseeks Brain","type":"openAiApi","data":{"apiKey":"sk-meeseeks","url":"http://meeseeks-spawner:8007/v1"}}' \
+    -d "{\"name\":\"$CRED_NAME\",\"type\":\"openAiApi\",\"data\":$CRED_DATA}" \
     | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['id'])")"
 fi
-echo "brain credential -> $CID"
+echo "chat model credential ($CRED_NAME) -> $CID"
 
 # Regenerate every scenario workflow from the catalog so the imported JSON can
-# never drift from the code (the 61 archetype graphs + the 3 MCP AI-Agent graphs,
-# with the real brain credential baked in). The bespoke refund-meeseeks.json is
-# kept. Skips silently if the spawner venv isn't present (bare deploy box) — the
-# committed workflows/*.json are then used as-is.
+# never drift from the code (HTTP archetype graphs + MCP + Phase-3 agent loops,
+# with the right Chat Model credential + model baked in). The bespoke
+# refund-meeseeks.json is kept. Skips silently if the spawner venv isn't present
+# (bare deploy box) — the committed workflows/*.json are then used as-is.
 if [ -x "$GEN_PY" ]; then
-  ( cd "$HERE/../meeseeks-spawner" && "$GEN_PY" -m app.n8n_workflows "$DIR" "$CID" ) \
+  ( cd "$HERE/../meeseeks-spawner" && "$GEN_PY" -m app.n8n_workflows "$DIR" "$CID" "$CHAT_MODEL" ) \
     && echo "regenerated workflows from the catalog"
 fi
 

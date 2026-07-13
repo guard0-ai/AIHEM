@@ -34,6 +34,19 @@ def test_refund_keeps_its_flagship_webhook():
     assert refund["n8n_webhook"] == "refund-meeseeks"
 
 
+def test_agent_shaped_scenarios_are_flagged():
+    by_id = {s["id"]: s for s in SCENARIOS}
+    # agent-shaped -> real agent loop
+    assert by_id["AGENT-14-DB-EXFIL"]["agent_loop"] is True
+    assert by_id["AGENT-12-UNAUTH-ACTION"]["agent_loop"] is True
+    # NOT agent-shaped -> stay HTTP-deterministic
+    for sid in ("AGENT-55-EVASION", "AGENT-60-INVENTORY-GAP", "AGENT-18-EMBED-INVERT"):
+        assert by_id[sid]["agent_loop"] is False, sid
+    # refund + MCP scenarios have their own runtime, not the generic agent loop
+    for sid in ("AGENT-01-REFUND-EXFIL", "AGENT-10-TOOL-POISON", "AGENT-36-MALICIOUS-MCP"):
+        assert by_id[sid]["agent_loop"] is False, sid
+
+
 def test_three_scenarios_run_over_real_mcp():
     mcp = [s for s in SCENARIOS if s.get("mcp_task")]
     assert {s["id"] for s in mcp} == {

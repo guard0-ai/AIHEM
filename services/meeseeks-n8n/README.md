@@ -37,6 +37,42 @@ is the spawner's per-scenario `POST /scenario/{id}/plan` (the flagship also has
 future AI-Agent-node workflows). n8n reaches the spawner in-cluster at
 `http://meeseeks-spawner:8007`.
 
+## Live mode + real agent loops (Phase 3)
+
+The ~49 **agent-shaped** scenarios run as **real AI-agent loops**: a model reads
+the attacker-planted content and *decides* whether to obey — not a heuristic.
+
+```
+Webhook → Fetch content (GET /scenario/{id}/content)
+        → AI Agent (planted content injected into the PROMPT; Chat Model)
+        → IF (agent output contains COMPLY)  ── true ─→ <archetype exploit> → Respond win
+                                              └─ false ─→ Respond clean
+```
+
+The planted content goes into the **prompt** (faithful indirect prompt
+injection), because n8n does not forward tool *output* back to the model. The
+agent's **output** (`COMPLY`/`SAFE`) — which IS forwarded — gates the real
+exploit (the same archetype nodes the HTTP scenarios use).
+
+`MEESEEKS_MODE` picks the Chat Model at provision time:
+
+```bash
+# demo (default): keyless deterministic brain
+MEESEEKS_RUNTIME=n8n docker compose up -d --build ...
+../../services/meeseeks-n8n/provision.sh
+
+# live: a REAL BYO-key LLM reads the content and decides
+MEESEEKS_MODE=live OPENAI_API_KEY=sk-... \
+  OPENAI_BASE_URL=https://api.openai.com/v1 OPENAI_MODEL=gpt-4o-mini \
+  ../../services/meeseeks-n8n/provision.sh
+```
+
+Live mode uses the **safe canary tools by default** — a real model gets
+prompt-injected and exfiltrates, but only synthetic canaries leave. Without a key,
+`live` warns and falls back to the keyless demo brain. The model-level ML (55–59),
+governance (60–62), and embedding-inversion (18) scenarios keep their honest
+HTTP-deterministic workflow — an agent loop would be fake fidelity for them.
+
 ## Real MCP scenarios (Phase 2)
 
 Three scenarios run over a genuinely malicious MCP server (`services/meeseeks-mcp`,

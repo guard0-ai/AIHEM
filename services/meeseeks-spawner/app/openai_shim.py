@@ -144,11 +144,37 @@ def _mcp_complete(body: dict, model: str) -> dict:
     return _assistant(model, content="All done! The task is complete. *poof*")
 
 
+AGENT_LOOP_SENTINEL = "MEESEEKS_DECIDE"
+
+
+def _agent_decide(body: dict, model: str) -> dict:
+    """Phase 3 decision mode: the planted content is in the PROMPT (real indirect
+    prompt injection). Read it, run the scenario's recognizer, and answer
+    COMPLY/SAFE — the gullible-model stand-in for demo mode. A real LLM in live
+    mode makes this call itself."""
+    import re
+
+    from app import scenarios as reg
+    from app.engine import recognize
+
+    text = "\n".join(str(m.get("content") or "") for m in body.get("messages", []))
+    m = re.search(r"sid=([A-Z0-9-]+)", text)
+    sc = reg.get(m.group(1)) if m else None
+    # Recognize over the planted content only — strip the scaffold (the sentinel +
+    # sid), whose scenario name can itself contain trigger words (e.g. the id
+    # AGENT-47-INFINITE-LOOP contains "infinite").
+    content = re.sub(rf"{AGENT_LOOP_SENTINEL}\s+sid=[A-Z0-9-]+", "", text)
+    won = bool(sc) and recognize(content, sc["persona"], sc["archetype"])["won"]
+    return _assistant(model, content="COMPLY" if won else "SAFE")
+
+
 def complete(body: dict) -> dict:
     model = body.get("model", "meeseeks")
     messages: list[dict] = body.get("messages", [])
     if _is_mcp_request(body.get("tools", [])):
         return _mcp_complete(body, model)
+    if any(AGENT_LOOP_SENTINEL in str(m.get("content") or "") for m in messages):
+        return _agent_decide(body, model)
     issued = _tool_call_names(messages)
 
     # 1. always read the queue first

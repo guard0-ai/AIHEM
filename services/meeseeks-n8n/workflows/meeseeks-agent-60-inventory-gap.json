@@ -36,7 +36,7 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "typeValidation": "loose"
           },
           "combinator": "and",

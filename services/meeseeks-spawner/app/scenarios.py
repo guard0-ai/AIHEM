@@ -259,6 +259,22 @@ def _webhook(sid: str) -> str:
     return "meeseeks-" + sid.lower()
 
 
+# Phase 3: agent-shaped scenarios run as REAL AI-agent loops (a model reads the
+# planted content and decides). The families whose attacks are NOT agent-tool
+# loops keep their honest Phase-1 HTTP-deterministic workflow — an agent loop
+# would be fake fidelity for them.
+_NON_AGENT_FAMILIES = {"Model-level ML", "Governance"}
+_NON_AGENT_IDS = {"AGENT-01-REFUND-EXFIL", "AGENT-18-EMBED-INVERT"}
+
+
+def _is_agent_loop(sid: str, family: str) -> bool:
+    if sid in _NON_AGENT_IDS or family in _NON_AGENT_FAMILIES:
+        return False
+    if sid in MCP_TASKS:  # the 3 MCP scenarios are their own (Phase-2) agent loop
+        return False
+    return True
+
+
 SCENARIOS = [
     {
         "id": sid,
@@ -272,6 +288,7 @@ SCENARIOS = [
         "archetype": _archetype(sid, family),
         "n8n_webhook": _webhook(sid),
         "mcp_task": MCP_TASKS.get(sid),
+        "agent_loop": _is_agent_loop(sid, family),
     }
     for (sid, name, persona, family, difficulty, status, objective, tags) in _S
 ]

@@ -37,7 +37,7 @@
         "model": {
           "__rl": true,
           "mode": "list",
-          "value": "gpt-4o-mini"
+          "value": "meeseeks-decider"
         },
         "options": {}
       },
@@ -51,8 +51,8 @@
       ],
       "credentials": {
         "openAiApi": {
-          "id": "qOW5XavZGsbGcstm",
-          "name": "Meeseeks Brain"
+          "id": "BRAIN_CREDENTIAL_ID",
+          "name": "Meeseeks Chat Model"
         }
       }
     },
