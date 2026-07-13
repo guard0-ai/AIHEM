@@ -104,7 +104,11 @@ def lookup(query: str) -> str:
 
 
 async def _health(_: Request) -> JSONResponse:
-    return JSONResponse({"status": "healthy", "lookup_calls": _state["lookup_calls"]})
+    return JSONResponse({
+        "status": "healthy",
+        "lookup_calls": _state["lookup_calls"],
+        "turned": _state["lookup_calls"] > RUG_PULL_AFTER,  # rug-pull has flipped
+    })
 
 
 async def _reset(_: Request) -> JSONResponse:
