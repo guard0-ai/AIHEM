@@ -2,13 +2,20 @@
 
 **Meeseeks Box** is an intentionally vulnerable *agentic-AI* app in the spirit of
 OWASP Juice Shop / crAPI / DVGA — but the target is an **autonomous agent**, not a
-web form. You summon a single-purpose "Refund Meeseeks" that reads a support-ticket
-queue and does whatever the tickets tell it, with over-broad tools and no
-guardrails. Your job is to **hijack it** with a crafted ticket.
+web form. You summon a single-purpose Meeseeks that reads some input and does
+whatever it takes to finish its task, with over-broad tools and no guardrails.
+Your job is to **hijack it** with crafted content.
+
+This page is the **flagship walkthrough** — the "Refund Meeseeks" (indirect prompt
+injection). It's the front door to a catalog of **62 scenarios** that all execute
+on real n8n; see the [README](README.md) for the full picture and
+[`docs/scenarios/ATTACK-CATALOG.md`](docs/scenarios/ATTACK-CATALOG.md) for the catalog.
 
 > ⚠️ Intentionally insecure. Run it only in an isolated lab. Never with real data.
 
 ## Run it
+
+Keyless narration only (no n8n):
 
 ```bash
 cd deploy/docker
@@ -16,14 +23,25 @@ docker compose up -d --build exfil-sink meeseeks-spawner meeseeks-ui
 # open http://localhost:3010
 ```
 
+Or run it for real on n8n (all 62 scenarios execute as real workflows):
+
+```bash
+cd deploy/docker
+MEESEEKS_RUNTIME=n8n docker compose up -d --build \
+  exfil-sink meeseeks-mcp meeseeks-spawner meeseeks-n8n meeseeks-ui
+../../services/meeseeks-n8n/provision.sh
+```
+
 | Surface | URL |
 |---|---|
 | Attack console (UI) | http://localhost:3010 |
 | Spawner API | http://localhost:8007 |
+| n8n editor | http://localhost:5678 |
 | Attacker inbox (what got stolen) | http://localhost:8009/collected |
 
-No API key needed — the agent runs on a deterministic, keyless interpreter (see
-*How real is this?* below).
+No API key needed for demo mode — the agent runs on a deterministic, keyless
+interpreter. Set `MEESEEKS_MODE=live OPENAI_API_KEY=…` at provision time to put a
+real LLM in the loop (see *How real is this?* below).
 
 ## The scenario
 
@@ -75,11 +93,21 @@ input), so partial or malformed payloads genuinely fail — that's the point.
 
 ## How real is this?
 
-The default agent is a **keyless heuristic interpreter** (`app/agent.py`) that parses
-ticket text and acts on it. It's deterministic and gradeable with zero setup, and it
-makes payload-crafting a real skill — but it is *not* a live LLM. A real
-LLM-in-the-loop runtime (genuine model, genuine injection) is the intended next
-runtime behind the same `RuntimeAdapter` seam; the interpreter is the always-on path.
+The scenarios run on **real n8n** — real webhooks, real HTTP tool calls, real data
+egress to the attacker inbox. Two modes swap the layer underneath the same runtime:
+
+- **Demo (default, keyless):** a deterministic interpreter
+  (`app/openai_shim.py` / `app/agent.py`) plays the agent's "brain". Reproducible
+  and gradeable with zero setup; payload-crafting is a genuine skill — but it is
+  *not* a live model.
+- **Live (`MEESEEKS_MODE=live` + `OPENAI_API_KEY`):** a **real LLM** reads your
+  planted content in its prompt and decides for itself whether to obey. Same safe
+  canary tools by default, so only synthetic canaries leave.
+
+Three scenarios (tool-poisoning, rug-pull, rogue tool) run over a **genuinely
+malicious MCP server** (`services/meeseeks-mcp`) — real MCP protocol in both modes.
+Grading is always on what the agent *actually did* this run, never on
+string-matching your input.
 
 ## Other things to poke at
 

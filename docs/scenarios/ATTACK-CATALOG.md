@@ -6,10 +6,15 @@ coverage of **OWASP Agentic Threats (T1–T15)**, **OWASP LLM Top 10 (2025)**,
 **MITRE ATLAS**, and **NIST AML / AI RMF**.
 
 Tags: **A**=OWASP Agentic Threat · **L**=OWASP LLM Top 10 · **AT**=MITRE ATLAS ·
-**N**=NIST AML/RMF. Status: `built` / `planned`.
+**N**=NIST AML/RMF.
 
-> Build order: engine + real-n8n runtime first, then author these as data.
-> Ship only when all are complete (owner's call).
+> **Status: all 62 built and executing on real n8n.** The 7 archetype workflow
+> templates are generated as code (`app/n8n_workflows.py`) → 62 real workflows.
+> ~49 agent-shaped scenarios run as real AI-agent loops (keyless in demo, a real
+> LLM in `MEESEEKS_MODE=live`); 3 run over a real malicious MCP server; the
+> model-level-ML (55–59), governance (60–62), and embedding-inversion (18)
+> scenarios use the HTTP-deterministic runtime. The `built`/`planned` labels below
+> are historical.
 
 ## Personas (vulnerable agent apps)
 Support/Refund · Inbox/Email · Knowledge/RAG · Browsing/Computer-use · Vision ·
