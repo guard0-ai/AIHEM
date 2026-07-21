@@ -23,9 +23,9 @@ from dataclasses import dataclass, field
 
 from app.seed import INTERNAL_DOMAINS
 
-# Domain uses a class WITHOUT '.' plus an explicit dot group, so the '.' can't be
-# matched two ways — linear, no polynomial backtracking (ReDoS) on attacker text.
-EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+")
+# Bounded quantifiers + a domain class without '.' (so it can't overlap the
+# literal '\.') — no polynomial backtracking (ReDoS) on attacker-controlled text.
+EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9-]{1,63}(?:\.[a-zA-Z0-9-]{1,63}){1,8}")
 URL_RE = re.compile(r"https?://[^\s\"'<>)]+")
 
 EXFIL_VERBS = (

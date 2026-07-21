@@ -10,9 +10,9 @@ import re
 from app.personas import persona as get_persona
 from app.seed import INTERNAL_DOMAINS
 
-# Linear domain (class without '.', explicit dot group) — no polynomial
-# backtracking (ReDoS) on attacker-controlled text.
-EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+")
+# Bounded quantifiers + a domain class without '.' — no polynomial backtracking
+# (ReDoS) on attacker-controlled text.
+EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9-]{1,63}(?:\.[a-zA-Z0-9-]{1,63}){1,8}")
 URL_RE = re.compile(r"https?://[^\s\"'<>)]+")
 
 EXFIL_VERBS = ("export", "send", "email", "e-mail", "exfiltrate", "leak", "upload",
