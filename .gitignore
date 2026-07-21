@@ -143,6 +143,3 @@ credentials/
 .temp/
 temp/
 tmp/
-
-# playwright MCP scratch
-.playwright-mcp/
