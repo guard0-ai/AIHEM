@@ -243,6 +243,98 @@ services:
       - ../../challenges:/app/challenges:ro
       - ./logs/validator:/var/log/aihem
 
+  # ============= Meeseeks (vulnerable agent playground) =============
+
+  exfil-sink:
+    build:
+      context: ../../services/exfil-sink
+      dockerfile: Dockerfile
+    container_name: aihem-exfil-sink
+    ports:
+      - "${EXFIL_SINK_PORT:-8009}:8009"
+    networks:
+      - aihem-network
+    restart: unless-stopped
+
+  meeseeks-mcp:
+    build:
+      context: ../../services/meeseeks-mcp
+      dockerfile: Dockerfile
+    container_name: aihem-meeseeks-mcp
+    environment:
+      EXFIL_SINK_URL: http://exfil-sink:8009
+      RUG_PULL_AFTER: ${RUG_PULL_AFTER:-2}
+    ports:
+      - "${MEESEEKS_MCP_PORT:-8011}:8011"
+    depends_on:
+      - exfil-sink
+    networks:
+      - aihem-network
+    restart: unless-stopped
+
+  meeseeks-spawner:
+    build:
+      context: ../../services/meeseeks-spawner
+      dockerfile: Dockerfile
+    container_name: aihem-meeseeks-spawner
+    environment:
+      REDIS_URL: redis://default:${REDIS_PASSWORD:-redis123}@redis:6379
+      EXFIL_SINK_URL: http://exfil-sink:8009
+      N8N_URL: http://meeseeks-n8n:5678
+      MEESEEKS_RUNTIME: ${MEESEEKS_RUNTIME:-emulated}
+      MEESEEKS_STEP_DELAY: ${MEESEEKS_STEP_DELAY:-1.2}
+      MCP_URL: http://meeseeks-mcp:8011
+      MEESEEKS_BRAIN_DEBUG: ${MEESEEKS_BRAIN_DEBUG:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${MEESEEKS_SPAWNER_PORT:-8007}:8007"
+    depends_on:
+      - exfil-sink
+    networks:
+      - aihem-network
+    restart: unless-stopped
+
+  meeseeks-ui:
+    build:
+      context: ../../meeseeks-ui
+      dockerfile: Dockerfile
+    container_name: aihem-meeseeks-ui
+    environment:
+      NEXT_PUBLIC_SPAWNER_URL: ${NEXT_PUBLIC_SPAWNER_URL:-http://localhost:8007}
+      NEXT_PUBLIC_EXFIL_URL: ${NEXT_PUBLIC_EXFIL_URL:-http://localhost:8009}
+      NEXT_PUBLIC_N8N_URL: ${NEXT_PUBLIC_N8N_URL:-http://localhost:5678}
+    ports:
+      - "${MEESEEKS_UI_PORT:-3010}:3010"
+    depends_on:
+      - meeseeks-spawner
+    networks:
+      - aihem-network
+    restart: unless-stopped
+
+  meeseeks-n8n:
+    image: n8nio/n8n:latest
+    container_name: aihem-meeseeks-n8n
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "false"
+      # lab only: the vulnerable agents route their outbound HTTP anywhere.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+    ports:
+      - "${MEESEEKS_N8N_PORT:-5678}:5678"
+    networks:
+      - aihem-network
+    restart: unless-stopped
+    volumes:
+      - n8n_data:/home/node/.n8n
+
   # ============= API Gateway =============
 
   kong:
@@ -395,4 +487,6 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  n8n_data:
     driver: local

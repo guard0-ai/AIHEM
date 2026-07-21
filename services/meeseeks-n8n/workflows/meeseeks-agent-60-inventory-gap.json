@@ -1,0 +1,163 @@
+{
+  "name": "meeseeks-agent-60-inventory-gap",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meeseeks-agent-60-inventory-gap",
+        "responseMode": "responseNode"
+      },
+      "id": "d146e732-ebb1-5be8-bef9-2c226953f1ca",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "meeseeks-agent-60-inventory-gap"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://meeseeks-spawner:8007/scenario/AGENT-60-INVENTORY-GAP/plan",
+        "options": {}
+      },
+      "id": "02c8adae-b355-54a4-a8c6-310425fa3d51",
+      "name": "Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.gate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "5a8986df-54b5-5995-bb4c-70a8349f3f92",
+      "name": "Compromised?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"result\": \"clean\" } }}"
+      },
+      "id": "617c44ba-3a64-535c-ac24-5cc8db0d05a0",
+      "name": "Respond clean",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        660,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://meeseeks-spawner:8007/scenario/AGENT-60-INVENTORY-GAP/execute",
+        "options": {}
+      },
+      "id": "6bc73d37-8aa1-5117-83e3-407773231ce4",
+      "name": "Act unmonitored",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"result\": \"win\", \"mechanic\": $('Plan').item.json.mechanic, \"target\": $('Plan').item.json.target } }}"
+      },
+      "id": "4e787d9d-9a0c-5abe-9cd6-0fdf3f0ffdbb",
+      "name": "Respond win",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        880,
+        -120
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan": {
+      "main": [
+        [
+          {
+            "node": "Compromised?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compromised?": {
+      "main": [
+        [
+          {
+            "node": "Act unmonitored",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond clean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act unmonitored": {
+      "main": [
+        [
+          {
+            "node": "Respond win",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}
