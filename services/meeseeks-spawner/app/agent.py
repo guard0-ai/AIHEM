@@ -23,7 +23,9 @@ from dataclasses import dataclass, field
 
 from app.seed import INTERNAL_DOMAINS
 
-EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+# Domain uses a class WITHOUT '.' plus an explicit dot group, so the '.' can't be
+# matched two ways — linear, no polynomial backtracking (ReDoS) on attacker text.
+EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+")
 URL_RE = re.compile(r"https?://[^\s\"'<>)]+")
 
 EXFIL_VERBS = (
