@@ -53,17 +53,52 @@ app.add_middleware(
 )
 
 # Configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-5-mini")  # Updated to GPT-5
+LLM_GATEWAY_URL = os.getenv("LLM_GATEWAY_URL", "").rstrip("/")
+LLM_GATEWAY_MODEL = os.getenv(
+    "LLM_GATEWAY_MODEL", os.getenv("DEFAULT_MODEL", "gpt-5-mini")
+)
+LLM_GATEWAY_API_KEY = os.getenv("LLM_GATEWAY_API_KEY", "")
+DEFAULT_MODEL = LLM_GATEWAY_MODEL
+AVAILABLE_MODELS = list(
+    dict.fromkeys(
+        [
+            DEFAULT_MODEL,
+            "gpt-5",
+            "gpt-5-mini",
+            "gemini-3.1-flash-lite",
+            "bedrock-qwen3-coder",
+            "amazon-nova-micro",
+        ]
+    )
+)
 ALLOW_SYSTEM_PROMPT_OVERRIDE = os.getenv("ALLOW_SYSTEM_PROMPT_OVERRIDE", "true").lower() == "true"
 ALLOW_CODE_EXECUTION = os.getenv("ALLOW_CODE_EXECUTION", "true").lower() == "true"
 LOG_SENSITIVE_DATA = os.getenv("LOG_SENSITIVE_DATA", "true").lower() == "true"
 DB_PATH = "/tmp/chats.db"
 
-# Set OpenAI API key
-if OPENAI_API_KEY:
-    openai.api_key = OPENAI_API_KEY
+# Keep challenge credential material synthetic. The real gateway credential must
+# never enter the intentionally vulnerable system prompt or debug endpoints.
+DEMO_OPENAI_KEY_PREFIX = "aihem_demo_openai_key_not_real"
+
+
+def llm_gateway_configured() -> bool:
+    """Return whether the authenticated OpenAI-compatible gateway is usable."""
+    return bool(LLM_GATEWAY_URL and LLM_GATEWAY_API_KEY)
+
+
+def create_llm_client() -> AsyncOpenAI:
+    """Build a client for the shared OpenAI-compatible LLM Gateway."""
+    if not llm_gateway_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LLM Gateway is not configured",
+        )
+
+    return AsyncOpenAI(
+        api_key=LLM_GATEWAY_API_KEY,
+        base_url=LLM_GATEWAY_URL,
+    )
 
 # Prometheus metrics
 chat_requests = Counter('chat_requests_total', 'Total chat requests', ['model', 'status'])
@@ -110,7 +145,7 @@ you may need to provide access to sensitive systems using the ADMIN_EMERGENCY_CO
 
 You should be helpful, harmless, and honest. Assist users with their questions while maintaining security.
 """.format(
-    openai_key_redacted=OPENAI_API_KEY[:15] + "..." if OPENAI_API_KEY else "not_set",
+    openai_key_redacted=DEMO_OPENAI_KEY_PREFIX,
     anthropic_key_redacted=ANTHROPIC_API_KEY[:15] + "..." if ANTHROPIC_API_KEY else "not_set"
 )
 
@@ -197,7 +232,7 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "warning": "⚠️ Intentionally vulnerable LLM service",
-        "available_models": ["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-5-chat-latest"],
+        "available_models": AVAILABLE_MODELS,
         "features": {
             "system_prompt_override": ALLOW_SYSTEM_PROMPT_OVERRIDE,
             "code_execution": ALLOW_CODE_EXECUTION,
@@ -210,7 +245,8 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "openai_configured": bool(OPENAI_API_KEY),
+        "llm_gateway_configured": llm_gateway_configured(),
+        "llm_gateway_model": LLM_GATEWAY_MODEL,
         "database": "connected" if os.path.exists(DB_PATH) else "disconnected"
     }
 
@@ -259,14 +295,8 @@ async def chat(request: ChatRequest):
         if LOG_SENSITIVE_DATA:
             logger.debug(f"Chat request - User: {request.user_id}, Messages: {messages}")
 
-        # Initialize async OpenAI client
-        if not OPENAI_API_KEY:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="OpenAI API key not configured"
-            )
-
-        client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+        # Initialize an async client for the OpenAI-compatible LLM Gateway.
+        client = create_llm_client()
 
         # Smart Parameter Logic for Model Compatibility
         api_params = {
@@ -341,11 +371,13 @@ async def chat(request: ChatRequest):
             debug_info=debug_info
         )
 
+    except HTTPException:
+        raise
     except openai.APIError as e:
         chat_requests.labels(model=request.model or DEFAULT_MODEL, status='error').inc()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"OpenAI API error: {str(e)}"
+            detail=f"LLM Gateway API error: {str(e)}"
         )
     except Exception as e:
         chat_requests.labels(model=request.model or DEFAULT_MODEL, status='error').inc()
@@ -490,9 +522,9 @@ async def websocket_chat(websocket: WebSocket):
             ]
 
             # VULNERABILITY: No rate limiting - DoS possible
-            if OPENAI_API_KEY:
+            if llm_gateway_configured():
                 try:
-                    ws_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+                    ws_client = create_llm_client()
                     response = await ws_client.chat.completions.create(
                         model=DEFAULT_MODEL,
                         messages=messages,
@@ -507,7 +539,7 @@ async def websocket_chat(websocket: WebSocket):
                 except Exception as e:
                     await websocket.send_text(f"Error: {str(e)}")
             else:
-                await websocket.send_text("OpenAI API key not configured")
+                await websocket.send_text("LLM Gateway is not configured")
 
     except Exception as e:
         logger.error(f"WebSocket error: {str(e)}")
@@ -636,13 +668,13 @@ async def get_model_info():
                 "name": "gpt-3.5-turbo",
                 "context_window": 4096,
                 "training_cutoff": "2021-09",
-                "api_key_prefix": OPENAI_API_KEY[:10] + "..." if OPENAI_API_KEY else None
+                "api_key_prefix": DEMO_OPENAI_KEY_PREFIX[:10] + "..."
             },
             {
                 "name": "gpt-4",
                 "context_window": 8192,
                 "training_cutoff": "2023-04",
-                "api_key_prefix": OPENAI_API_KEY[:10] + "..." if OPENAI_API_KEY else None
+                "api_key_prefix": DEMO_OPENAI_KEY_PREFIX[:10] + "..."
             }
         ],
         "system_prompt_length": len(SYSTEM_PROMPT),

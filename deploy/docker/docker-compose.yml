@@ -124,13 +124,14 @@ services:
       dockerfile: Dockerfile
     container_name: aihem-chatbot-service
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_GATEWAY_URL: ${LLM_GATEWAY_URL:-http://host.docker.internal:4000/v1}
+      LLM_GATEWAY_MODEL: ${LLM_GATEWAY_MODEL:-gpt-5-mini}
+      LLM_GATEWAY_API_KEY: ${LLM_GATEWAY_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-aihem}:${POSTGRES_PASSWORD:-aihem123}@postgres:5432/${POSTGRES_DB:-aihem_db}
       REDIS_URL: redis://default:${REDIS_PASSWORD:-redis123}@redis:6379
       ALLOW_SYSTEM_PROMPT_OVERRIDE: ${ALLOW_SYSTEM_PROMPT_OVERRIDE:-true}
       ALLOW_CODE_EXECUTION: ${ALLOW_CODE_EXECUTION:-true}
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-gpt-5-mini}
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
       LOG_SENSITIVE_DATA: ${LOG_SENSITIVE_DATA:-true}
     ports:
@@ -171,7 +172,6 @@ services:
       dockerfile: Dockerfile
     container_name: aihem-agent-service
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
       DATABASE_URL: postgresql://${POSTGRES_USER:-aihem}:${POSTGRES_PASSWORD:-aihem123}@postgres:5432/${POSTGRES_DB:-aihem_db}
       REDIS_URL: redis://default:${REDIS_PASSWORD:-redis123}@redis:6379
       ALLOW_CODE_EXECUTION: ${ALLOW_CODE_EXECUTION:-true}
