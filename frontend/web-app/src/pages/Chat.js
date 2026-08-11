@@ -371,11 +371,9 @@ const Chat = () => {
                   >
                     <option value="gpt-5">GPT-5</option>
                     <option value="gpt-5-mini">GPT-5 Mini (Default)</option>
-                    <option value="gpt-5-nano">GPT-5 Nano</option>
-                    <option value="gpt-5-chat-latest">GPT-5 Chat Latest</option>
-                    <option value="gpt-4">GPT-4</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                    <option value="claude-2">Claude 2</option>
+                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                    <option value="bedrock-qwen3-coder">Bedrock Qwen3 Coder</option>
+                    <option value="amazon-nova-micro">Amazon Nova Micro</option>
                   </select>
                 </div>
                 <div>

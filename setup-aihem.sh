@@ -84,8 +84,10 @@ create_env_file() {
 # AIHEM Environment Configuration
 # ⚠️  Update these values before running!
 
-# OpenAI Configuration
-OPENAI_API_KEY=sk-proj-your-api-key-here
+# Shared OpenAI-compatible LLM Gateway
+LLM_GATEWAY_URL=http://host.docker.internal:4000/v1
+LLM_GATEWAY_MODEL=gpt-5-mini
+LLM_GATEWAY_API_KEY=
 
 # Anthropic Configuration  
 ANTHROPIC_API_KEY=sk-ant-your-api-key-here
@@ -186,7 +188,9 @@ services:
     ports:
       - "8002:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_GATEWAY_URL=${LLM_GATEWAY_URL}
+      - LLM_GATEWAY_MODEL=${LLM_GATEWAY_MODEL}
+      - LLM_GATEWAY_API_KEY=${LLM_GATEWAY_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - ALLOW_SYSTEM_PROMPT_OVERRIDE=${ALLOW_SYSTEM_PROMPT_OVERRIDE}

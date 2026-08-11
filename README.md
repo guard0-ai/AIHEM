@@ -47,7 +47,7 @@ Inspired by OWASP's crAPI and WebGoat, AIHEM provides a safe, realistic environm
 
 - Docker & Docker Compose (or `docker compose` command)
 - 4GB+ RAM (lightweight services, no heavy ML dependencies!)
-- OpenAI API key (optional - only for ChatBot & Agent services)
+- Access to the shared OpenAI-compatible LLM Gateway (optional - only for ChatBot)
 
 ### Installation
 
@@ -57,12 +57,12 @@ Inspired by OWASP's crAPI and WebGoat, AIHEM provides a safe, realistic environm
    cd AIHEM
    ```
 
-2. **Configure environment** (Optional if you don't need ChatBot/Agent)
+2. **Configure environment** (Optional if you don't need ChatBot)
    ```bash
    cd deploy/docker
    cp .env.example .env 2>/dev/null || touch .env
-   # Edit .env and add your OpenAI API key:
-   # OPENAI_API_KEY=sk-proj-your-key-here
+   # Edit .env and add a dedicated, restricted LLM Gateway client key:
+   # LLM_GATEWAY_API_KEY=your-private-gateway-client-key
    ```
 
 3. **Start the platform**
@@ -184,15 +184,15 @@ docker-compose down -v  # Warning: Deletes all data!
 docker-compose up -d
 ```
 
-### OpenAI API errors
+### LLM Gateway API errors
 
-**Don't have an OpenAI key?** No problem!
+**Don't have an LLM Gateway client key?** No problem!
 - Auth Service works without it ✅
 - RAG Service works without it ✅
 - Frontend works without it ✅
-- Only ChatBot and Agent services need it
+- Only the ChatBot service needs it
 
-**Start without ChatBot/Agent:**
+**Start without ChatBot:**
 ```bash
 docker-compose up -d postgres redis mongodb auth-service rag-service frontend
 ```
