@@ -6,7 +6,7 @@ pydantic==2.5.0
 pydantic-settings==2.1.0
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
-redis==5.0.1
+redis==8.0.1
 python-dotenv==1.0.0
 httpx==0.25.2
 websockets==12.0
