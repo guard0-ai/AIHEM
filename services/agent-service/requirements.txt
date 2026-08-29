@@ -1,6 +1,6 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-openai==1.6.1
+openai==2.44.0
 langchain==0.0.348
 pydantic==2.5.0
 sqlalchemy==2.0.23
