@@ -58,9 +58,23 @@ jobs:
           load: true
           tags: localhost/aihem-${{ matrix.image.name }}:pr-scan
 
+      - name: Install Trivy
+        env:
+          TRIVY_VERSION: 0.70.0
+        run: |
+          base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+          tarball="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl -sSfL --retry 3 -O "$base/$tarball"
+          curl -sSfL --retry 3 "$base/trivy_${TRIVY_VERSION}_checksums.txt" | grep " $tarball\$" | sha256sum -c -
+          mkdir -p trivy-bin
+          tar -xzf "$tarball" -C trivy-bin trivy
+          echo "$RUNNER_TEMP/trivy-bin" >> "$GITHUB_PATH"
+
       - name: Trivy image scan (table)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          skip-setup-trivy: true
           image-ref: localhost/aihem-${{ matrix.image.name }}:pr-scan
           format: 'table'
           severity: ${{ env.SEVERITY }}
@@ -70,6 +84,7 @@ jobs:
       - name: Trivy image scan (SARIF)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          skip-setup-trivy: true
           image-ref: localhost/aihem-${{ matrix.image.name }}:pr-scan
           format: 'sarif'
           output: 'trivy-image.sarif'
